@@ -49,20 +49,21 @@ module CBuiltin #:nodoc:
       trav.enter_generic_labeled_statement += T(:count_statement)
       trav.enter_case_labeled_statement    += T(:count_statement)
       trav.enter_default_labeled_statement += T(:count_statement)
-      trav.enter_expression_statement      += T(:count_statement)
+      trav.enter_expression_statement      += T(:count_expression_statement)
       trav.enter_if_statement              += T(:count_statement)
       trav.enter_if_else_statement         += T(:count_statement)
       trav.enter_switch_statement          += T(:count_statement)
       trav.enter_while_statement           += T(:count_statement)
       trav.enter_do_statement              += T(:count_statement)
-      trav.enter_for_statement             += T(:count_statement)
-      trav.enter_c99_for_statement         += T(:count_statement)
+      trav.enter_for_statement             += T(:count_for_statement)
+      trav.enter_c99_for_statement         += T(:count_c99_for_statement)
       trav.enter_goto_statement            += T(:count_statement)
       trav.enter_continue_statement        += T(:count_statement)
       trav.enter_break_statement           += T(:count_statement)
       trav.enter_return_statement          += T(:count_statement)
       trav.leave_translation_unit          += M(:measure)
       @stmt_cnt = 0
+      @for_header_statements = {}
     end
 
     private
@@ -73,6 +74,22 @@ module CBuiltin #:nodoc:
       if @fpath == stmt.location.fpath
         @stmt_cnt += 1
       end
+    end
+
+    def count_expression_statement(stmt)
+      return if @for_header_statements.delete(stmt.object_id)
+      count_statement(stmt)
+    end
+
+    def count_for_statement(stmt)
+      count_statement(stmt)
+      @for_header_statements[stmt.initial_statement.object_id] = true
+      @for_header_statements[stmt.condition_statement.object_id] = true
+    end
+
+    def count_c99_for_statement(stmt)
+      count_statement(stmt)
+      @for_header_statements[stmt.condition_statement.object_id] = true
     end
 
     def measure(*)
@@ -123,20 +140,21 @@ module CBuiltin #:nodoc:
       trav.enter_generic_labeled_statement += T(:count_statement)
       trav.enter_case_labeled_statement    += T(:count_statement)
       trav.enter_default_labeled_statement += T(:count_statement)
-      trav.enter_expression_statement      += T(:count_statement)
+      trav.enter_expression_statement      += T(:count_expression_statement)
       trav.enter_if_statement              += T(:count_statement)
       trav.enter_if_else_statement         += T(:count_statement)
       trav.enter_switch_statement          += T(:count_statement)
       trav.enter_while_statement           += T(:count_statement)
       trav.enter_do_statement              += T(:count_statement)
-      trav.enter_for_statement             += T(:count_statement)
-      trav.enter_c99_for_statement         += T(:count_statement)
+      trav.enter_for_statement             += T(:count_for_statement)
+      trav.enter_c99_for_statement         += T(:count_c99_for_statement)
       trav.enter_goto_statement            += T(:count_statement)
       trav.enter_continue_statement        += T(:count_statement)
       trav.enter_break_statement           += T(:count_statement)
       trav.enter_return_statement          += T(:count_statement)
       @cur_fun = nil
       @stmt_cnt = 0
+      @for_header_statements = {}
     end
 
     private
@@ -162,6 +180,22 @@ module CBuiltin #:nodoc:
     def count_statement(*)
       @stmt_cnt += 1 if @cur_fun
     end
+
+    def count_expression_statement(stmt)
+      return if @for_header_statements.delete(stmt.object_id)
+      count_statement(stmt)
+    end
+
+    def count_for_statement(stmt)
+      count_statement(stmt)
+      @for_header_statements[stmt.initial_statement.object_id] = true
+      @for_header_statements[stmt.condition_statement.object_id] = true
+    end
+
+    def count_c99_for_statement(stmt)
+      count_statement(stmt)
+      @for_header_statements[stmt.condition_statement.object_id] = true
+    end
   end
 
   class FN_UNRC < MetricMeasurement
@@ -179,20 +213,21 @@ module CBuiltin #:nodoc:
       trav.enter_generic_labeled_statement += T(:count_statement)
       trav.enter_case_labeled_statement    += T(:count_statement)
       trav.enter_default_labeled_statement += T(:count_statement)
-      trav.enter_expression_statement      += T(:count_statement)
+      trav.enter_expression_statement      += T(:count_expression_statement)
       trav.enter_if_statement              += T(:count_statement)
       trav.enter_if_else_statement         += T(:count_statement)
       trav.enter_switch_statement          += T(:count_statement)
       trav.enter_while_statement           += T(:count_statement)
       trav.enter_do_statement              += T(:count_statement)
-      trav.enter_for_statement             += T(:count_statement)
-      trav.enter_c99_for_statement         += T(:count_statement)
+      trav.enter_for_statement             += T(:count_for_statement)
+      trav.enter_c99_for_statement         += T(:count_c99_for_statement)
       trav.enter_goto_statement            += T(:count_statement)
       trav.enter_continue_statement        += T(:count_statement)
       trav.enter_break_statement           += T(:count_statement)
       trav.enter_return_statement          += T(:count_statement)
       @cur_fun = nil
       @unreached_stmt_cnt = 0
+      @for_header_statements = {}
     end
 
     private
@@ -216,8 +251,24 @@ module CBuiltin #:nodoc:
 
     def count_statement(stmt)
       if @cur_fun
-        @unreached_stmt_cnt += 1 unless stmt.executed?
+        @unreached_stmt_cnt += 1 unless stmt.control_flow_reachable?
       end
+    end
+
+    def count_expression_statement(stmt)
+      return if @for_header_statements.delete(stmt.object_id)
+      count_statement(stmt)
+    end
+
+    def count_for_statement(stmt)
+      count_statement(stmt)
+      @for_header_statements[stmt.initial_statement.object_id] = true
+      @for_header_statements[stmt.condition_statement.object_id] = true
+    end
+
+    def count_c99_for_statement(stmt)
+      count_statement(stmt)
+      @for_header_statements[stmt.condition_statement.object_id] = true
     end
   end
 
@@ -281,6 +332,8 @@ module CBuiltin #:nodoc:
   class FN_UNUV < MetricMeasurement
     def_registrant_phase Cc1::Prepare2Phase
 
+    Write = Struct.new(:branch, :used)
+
     def initialize(phase_ctxt)
       super
       @fpath = phase_ctxt[:sources].first.fpath
@@ -292,8 +345,10 @@ module CBuiltin #:nodoc:
       interp.on_variable_referred       += T(:refer_variable)
       interp.on_variable_value_referred += T(:read_variable)
       interp.on_variable_value_updated  += T(:write_variable)
+      interp.on_branch_ended            += M(:merge_finished_branch)
       @cur_fun = nil
-      @vars = nil
+      @variables = nil
+      @interpreter = interp
     end
 
     private
@@ -302,45 +357,112 @@ module CBuiltin #:nodoc:
 
     def enter_function(fun_def, *)
       @cur_fun = fun_def
-      @vars = {}
+      @variables = {}
     end
 
     def leave_function(*)
       if @cur_fun
-        useless_cnt = @vars.each_value.reduce(0) { |cnt, read_cnt|
-          read_cnt == 0 ? cnt + 1 : cnt
+        useless_cnt = @variables.each_value.reduce(0) { |cnt, variable|
+          if variable[:writes].empty?
+            variable[:referenced] ? cnt : cnt + 1
+          else
+            cnt + variable[:writes].count { |write| !write.used }
+          end
         }
 
         FN_UNUV(FunctionId.new(@cur_fun.identifier.value,
                                @cur_fun.signature.to_s),
                 @cur_fun.location, useless_cnt)
         @cur_fun = nil
-        @vars = nil
+        @variables = nil
       end
     end
 
     def define_variable(*, var)
-      if @cur_fun
-        @vars[var.name] = 0
-      end
+      @variables[variable_key(var)] = { :referenced => false, :writes => [],
+                                        :live_writes => [] } if
+        @cur_fun && var.named?
     end
 
     def refer_variable(*, var)
-      if @cur_fun
-        @vars[var.name] += 1 if var.named? && @vars[var.name]
-      end
+      variable = tracked_variable(var)
+      variable[:referenced] = true if variable
     end
 
     def read_variable(*, var)
-      if @cur_fun
-        @vars[var.name] += 1 if var.named? && @vars[var.name]
+      variable = tracked_variable(var)
+      return unless variable
+
+      variable[:referenced] = true
+      variable[:live_writes].each do |write|
+        write.used = true if write_reaches_current_branch?(write)
       end
     end
 
     def write_variable(*, var)
-      if @cur_fun
-        @vars[var.name] = 0 if var.named? && @vars[var.name]
+      variable = tracked_variable(var)
+      return unless variable
+
+      variable[:live_writes].reject! do |write|
+        overwritten_on_every_path_to_current_branch?(write)
       end
+
+      write = Write.new(@interpreter.current_branch, false)
+      variable[:writes].push(write)
+      variable[:live_writes].push(write)
+    end
+
+    def merge_finished_branch(branch)
+      return unless @variables && branch.final?
+
+      @variables.each_value do |variable|
+        variable[:live_writes].reject! do |write|
+          write.branch && write.branch.group == branch.group &&
+            write.branch.break_with_return?
+        end
+
+        variable[:live_writes].each do |write|
+          if write.branch && write.branch.group == branch.group
+            write.branch = branch.trunk
+          end
+        end
+      end
+    end
+
+    def tracked_variable(var)
+      @variables[variable_key(var)] if @variables && var.named?
+    end
+
+    def variable_key(var)
+      # The interpreter creates separate value versions for the same source
+      # variable in different control-flow branches. Its declaration or
+      # definition remains the stable scope-aware identity across versions.
+      var.declarations_and_definitions.first
+    end
+
+    def write_reaches_current_branch?(write)
+      branch_in_current_path?(write.branch)
+    end
+
+    def overwritten_on_every_path_to_current_branch?(write)
+      # A write outside a branch follows every surviving branch path.  Inside
+      # a branch, only an earlier write in that same branch is certainly
+      # overwritten; writes from outer or sibling branches remain possible.
+      @interpreter.current_branch.nil? ||
+        write.branch == @interpreter.current_branch
+    end
+
+    def branch_in_current_path?(branch)
+      current_branch = @interpreter.current_branch
+      return true unless current_branch
+      return true unless branch
+
+      while current_branch
+        return true if current_branch == branch
+        current_branch = current_branch.trunk
+      end
+
+      false
     end
   end
 
@@ -439,25 +561,9 @@ module CBuiltin #:nodoc:
       trav.leave_ansi_function_definition  += T(:leave_function)
       trav.enter_kandr_function_definition += T(:enter_function)
       trav.leave_kandr_function_definition += T(:leave_function)
-      trav.enter_error_statement           += T(:enter_statement)
-      trav.enter_generic_labeled_statement += T(:enter_statement)
-      trav.enter_case_labeled_statement    += T(:enter_statement)
-      trav.enter_default_labeled_statement += T(:enter_statement)
-      trav.enter_expression_statement      += T(:enter_statement)
-      trav.enter_if_statement              += T(:enter_statement)
-      trav.enter_if_else_statement         += T(:enter_statement)
-      trav.enter_switch_statement          += T(:enter_statement)
-      trav.enter_while_statement           += T(:enter_statement)
-      trav.enter_do_statement              += T(:enter_statement)
-      trav.enter_for_statement             += T(:enter_statement)
-      trav.enter_c99_for_statement         += T(:enter_statement)
-      trav.enter_goto_statement            += T(:enter_statement)
-      trav.enter_continue_statement        += T(:enter_statement)
-      trav.enter_break_statement           += T(:enter_statement)
       trav.enter_return_statement          += T(:count_return)
-      @cur_fun  = nil
-      @ret_cnt  = 0
-      @lst_stmt = nil
+      @cur_fun = nil
+      @ret_cnt = 0
     end
 
     private
@@ -465,39 +571,25 @@ module CBuiltin #:nodoc:
     def do_execute(*) end
 
     def enter_function(fun_def)
-      @cur_fun  = fun_def
-      @ret_cnt  = 0
-      @lst_stmt = nil
+      @cur_fun = fun_def
+      @ret_cnt = 0
     end
 
     def leave_function(*)
       if @cur_fun
-        if @cur_fun.type.return_type.void? &&
-            !(@lst_stmt.kind_of?(Cc1::ReturnStatement))
-          FN_RETN(FunctionId.new(@cur_fun.identifier.value,
-                                 @cur_fun.signature.to_s),
-                  @cur_fun.location, @ret_cnt + 1)
-        else
-          FN_RETN(FunctionId.new(@cur_fun.identifier.value,
-                                 @cur_fun.signature.to_s),
-                  @cur_fun.location, @ret_cnt)
-        end
-        @cur_fun  = nil
-        @ret_cnt  = 0
-        @lst_stmt = nil
-      end
-    end
-
-    def enter_statement(node)
-      if @cur_fun
-        @lst_stmt = node if node.executed?
+        implicit_return = @cur_fun.type.return_type.void? &&
+          @cur_fun.may_fall_through?
+        FN_RETN(FunctionId.new(@cur_fun.identifier.value,
+                               @cur_fun.signature.to_s),
+                @cur_fun.location, @ret_cnt + (implicit_return ? 1 : 0))
+        @cur_fun = nil
+        @ret_cnt = 0
       end
     end
 
     def count_return(node)
       if @cur_fun
         @ret_cnt += 1
-        @lst_stmt = node
       end
     end
   end
@@ -567,14 +659,20 @@ module CBuiltin #:nodoc:
       trav.leave_ansi_function_definition  += T(:leave_function)
       trav.enter_kandr_function_definition += T(:enter_function)
       trav.leave_kandr_function_definition += T(:leave_function)
-      trav.enter_compound_statement        += T(:enter_block)
-      trav.leave_compound_statement        += T(:leave_block)
-      trav.enter_if_statement              += T(:check_statement)
-      trav.enter_if_else_statement         += T(:check_statement)
-      trav.enter_while_statement           += T(:check_statement)
-      trav.enter_do_statement              += T(:check_statement)
-      trav.enter_for_statement             += T(:check_statement)
-      trav.enter_c99_for_statement         += T(:check_statement)
+      trav.enter_if_statement              += T(:enter_control)
+      trav.leave_if_statement              += T(:leave_control)
+      trav.enter_if_else_statement         += T(:enter_control)
+      trav.leave_if_else_statement         += T(:leave_control)
+      trav.enter_switch_statement          += T(:enter_control)
+      trav.leave_switch_statement          += T(:leave_control)
+      trav.enter_while_statement           += T(:enter_control)
+      trav.leave_while_statement           += T(:leave_control)
+      trav.enter_do_statement              += T(:enter_control)
+      trav.leave_do_statement              += T(:leave_control)
+      trav.enter_for_statement             += T(:enter_control)
+      trav.leave_for_statement             += T(:leave_control)
+      trav.enter_c99_for_statement         += T(:enter_control)
+      trav.leave_c99_for_statement         += T(:leave_control)
       @cur_fun = nil
     end
 
@@ -584,10 +682,9 @@ module CBuiltin #:nodoc:
 
     def enter_function(fun_def)
       @cur_fun = fun_def
-      # NOTE: Nest level of the top of the function is 0.
-      #       Function definition must have a compound-statement as the
-      #       function body.
-      @max_nest_level = @cur_nest_level = -1
+      # NOTE: The function body's top-level statements have nesting level 0.
+      @max_nest_level = @cur_nest_level = 0
+      @control_stack = []
     end
 
     def leave_function(fun_def)
@@ -596,46 +693,35 @@ module CBuiltin #:nodoc:
                                @cur_fun.signature.to_s),
                 @cur_fun.location, @max_nest_level)
         @cur_fun = nil
+        @control_stack = nil
       end
     end
 
-    def enter_block(*)
+    def enter_control(stmt)
       if @cur_fun
-        @cur_nest_level += 1
-        @max_nest_level = [@max_nest_level, @cur_nest_level].max
-      end
-    end
-
-    def leave_block(*)
-      if @cur_fun
-        @cur_nest_level -= 1
-      end
-    end
-
-    def check_statement(stmt)
-      if @cur_fun
-        case stmt
-        when Cc1::IfStatement
-          sub_statement = stmt.statement
-        when Cc1::IfElseStatement
-          if stmt.then_statement.kind_of?(Cc1::CompoundStatement)
-            sub_statement = stmt.else_statement
-          else
-            sub_statement = stmt.then_statement
-          end
-        when Cc1::WhileStatement, Cc1::DoStatement
-          sub_statement = stmt.statement
-        when Cc1::ForStatement, Cc1::C99ForStatement
-          sub_statement = stmt.body_statement
-        end
-
-        case sub_statement
-        when Cc1::CompoundStatement, Cc1::IfStatement, Cc1::IfElseStatement
-        else
+        adds_level = !else_if_arm?(stmt)
+        @control_stack.push([stmt, adds_level])
+        if adds_level
           @cur_nest_level += 1
           @max_nest_level = [@max_nest_level, @cur_nest_level].max
         end
       end
+    end
+
+    def leave_control(*)
+      if @cur_fun
+        _, adds_level = @control_stack.pop
+        @cur_nest_level -= 1 if adds_level
+      end
+    end
+
+    def else_if_arm?(stmt)
+      parent = @control_stack.last
+      # An if/else-if/else ladder is one control structure for FN_NEST.
+      parent && parent[0].kind_of?(Cc1::IfElseStatement) &&
+        parent[0].else_statement.equal?(stmt) &&
+        (stmt.kind_of?(Cc1::IfStatement) ||
+         stmt.kind_of?(Cc1::IfElseStatement))
     end
   end
 
@@ -733,6 +819,16 @@ module CBuiltin #:nodoc:
       trav.enter_if_statement              += T(:enter_selection)
       trav.enter_if_else_statement         += T(:enter_selection)
       trav.enter_case_labeled_statement    += T(:enter_selection)
+      # Add Loops
+      trav.enter_while_statement           += T(:enter_selection)
+      trav.enter_do_statement              += T(:enter_selection)
+      trav.enter_for_statement             += T(:enter_selection)
+      trav.enter_c99_for_statement         += T(:enter_selection)
+      # Add Logical Operators
+      trav.enter_logical_and_expression    += T(:enter_selection)
+      trav.enter_logical_or_expression     += T(:enter_selection)
+      # Add Ternary
+      trav.enter_conditional_expression    += T(:enter_selection)
       @cur_fun = nil
       @cycl_compl = 0
     end

@@ -2369,13 +2369,13 @@ func_metric_name
   | "FN_UNRC"  <- 到達しないステートメント数
   | "FN_LINE"  <- 物理行数
   | "FN_PARA"  <- パラメータ数
-  | "FN_UNUV"  <- 使用/再使用されない変数の数
+  | "FN_UNUV"  <- 未使用の変数および未使用の代入値の数
   | "FN_CSUB"  <- 関数を呼び出す箇所数
   | "FN_CALL"  <- 関数から呼び出される箇所数
   | "FN_GOTO"  <- goto 文の数
   | "FN_RETN"  <- 関数内の戻り点の数
-  | "FN_UELS"  <- else なしの if 文数
-  | "FN_NEST"  <- 制御フローグラフの最大ネスト数
+  | "FN_UELS"  <- 最終 else 節を持たない else if 文数
+  | "FN_NEST"  <- 制御構造の最大ネスト深度
   | "FN_PATH"  <- 推定静的パス数
   | "FN_CYCM"  <- サイクロマティック複雑度
 
@@ -36372,13 +36372,13 @@ int foo(int i)
 * FN_UNRC::関数内の制御が到達しない文の数
 * FN_LINE::関数内の保守コード行数
 * FN_PARA::関数の仮引数の数
-* FN_UNUV::関数内の未使用および再使用されない変数の数
+* FN_UNUV::未使用の変数および未使用の代入値の数
 * FN_CSUB::関数内の子関数コールの数
 * FN_CALL::他の関数から被呼び出し箇所数
 * FN_GOTO::関数内の @code{goto} 文の数
 * FN_RETN::関数内の戻り点の数
-* FN_UELS::関数内の完結していない @code{if} 文の数
-* FN_NEST::関数内のネスティングの最深段数
+* FN_UELS::最終 @code{else} 節を持たない @code{else if} 文の数
+* FN_NEST::関数内の制御構造の最大ネスト深度
 * FN_PATH::関数内の推定静的パス数
 * FN_CYCM::関数の経路複雑度
 @end menu
@@ -36393,8 +36393,8 @@ int foo(int i)
 
 @subsection 内容
 
-ファイル内に言語の構文規則としてステートメント(文)と認識されるものの数を示しま
-す。
+ファイル内の複文以外の C 文構造の数を示します。宣言と関数定義は数えません。
+各 @code{for} 構造は 1 と数え、初期化、条件、更新式は別には数えません。
 
 @subsection サンプルコード
 
@@ -36421,7 +36421,7 @@ void bar(int a)
         int i;
     } s;
 
-    /* A for-statement which has 2 expression-statements (`s.i=0;' and `s.i<a;') makes FL_STMT += 3 */
+    /* The complete for-statement makes FL_STMT += 1 */
     for (s.i = 0; s.i < a; s.i++) {
         switch (s.i % 3) {  /* A switch-statement makes FL_STMT += 1 */
         case 0:             /* A label is part of a labeled-statement, but it makes FL_STMT += 1 */
@@ -36437,11 +36437,11 @@ void bar(int a)
     }
 }
 
-/* Finally, FL_STMT == 17 */
+/* Finally, FL_STMT == 15 */
 @end verbatim
 
 @example
-MET,FL_STMT,test.c,17
+MET,FL_STMT,test.c,15
 @end example
 
 @subsection 対応バージョン
@@ -36458,7 +36458,9 @@ MET,FL_STMT,test.c,17
 
 @subsection 内容
 
-ファイル内に定義されている関数の数を示します。
+そのソースファイルに含まれる ANSI 形式または K&R 形式の関数定義構造の数を
+示します。宣言、プロトタイプ、関数型、関数ポインタ、および集成体のメンバは
+数えません。
 
 @subsection サンプルコード
 
@@ -36496,7 +36498,8 @@ MET,FL_FUNC,test.c,3
 
 @subsection 内容
 
-関数内に言語の構文規則としてステートメント(文)と認識されるものの数を示します。
+関数内の複文以外の C 文構造の数を示します。宣言は数えません。各 @code{for}
+構造は 1 と数え、初期化、条件、更新式は別には数えません。
 
 @subsection サンプルコード
 
@@ -36523,7 +36526,7 @@ void bar(int a)
         int i;
     } s;
 
-    /* A for-statement which has 2 expression-statements (`s.i=0;' and * `s.i<a;') makes bar's FN_STMT += 3 */
+    /* The complete for-statement makes bar's FN_STMT += 1 */
     for (s.i = 0; s.i < a; s.i++) {
         switch (s.i % 3) {  /* A switch-statement makes bar's FN_STMT += 1 */
         case 0:             /* A label is part of a labeled-statement, but it makes bar's FN_STMT += 1 */
@@ -36538,13 +36541,13 @@ void bar(int a)
         }
     }
 
-    /* bar's FN_STMT == 13 */
+    /* bar's FN_STMT == 11 */
 }
 @end verbatim
 
 @example
 MET,FN_STMT,foo,int foo(int),test.c,1,5,4
-MET,FN_STMT,bar,void bar(int),test.c,14,6,13
+MET,FN_STMT,bar,void bar(int),test.c,14,6,11
 @end example
 
 @subsection 対応バージョン
@@ -36561,7 +36564,14 @@ MET,FN_STMT,bar,void bar(int),test.c,14,6,13
 
 @subsection 内容
 
-いかなる条件でも実行されることのないステートメントの数を示します。
+関数内の実行可能な制御フロー経路のいずれからも到達できない文の数を
+示します。FN_UNRC は FN_STMT と同じ文を対象とします。宣言は対象外であり、
+@code{for} 文は 1 文として数え、その初期化部と制御式を個別には数えません。
+
+到達可能性の判定では @code{return}、@code{break}、@code{continue}、
+@code{goto}、@code{switch} の分岐、結果を確定できる条件式、および後続へ
+制御が移らないループを考慮します。到達不能な制御文またはラベル付き文と、
+その内部に含まれる到達不能な各文は、それぞれ個別に数えます。
 
 @subsection サンプルコード
 
@@ -36633,7 +36643,9 @@ MET,FN_UNRC,foo,int foo(int),test.c,3,5,5
 
 @subsection 内容
 
-関数定義の開始行から関数定義の終了行までの物理行数を示します。
+関数識別子を含む行から、関数本体の閉じ波括弧を含む行までの物理行数を示します。
+識別子より前の行は含めず、その範囲内の空行、コメント行、および非活性の
+プリプロセッサ行は含めます。
 
 @subsection サンプルコード
 
@@ -36685,7 +36697,9 @@ MET,FN_LINE,baz,int baz(int),test.c,17,1,6
 
 @subsection 内容
 
-関数定義の引数リスト内に宣言された仮引数の数を示します。
+関数定義で宣言された名前付き仮引数の数を示します。@code{void} 指定子のみの
+引数リストと、型指定のない空の引数リストは 0 と数えます。省略記号は名前付きの
+仮引数ではないため数えません。ANSI 形式と K&R 形式の定義をともに対象とします。
 
 @subsection サンプルコード
 
@@ -36720,12 +36734,15 @@ MET,FN_PARA,bar,"int bar(int,long,char *)",test.c,6,5,3
 
 @subsection メトリック名
 
-関数内の未使用および再使用されない変数の数
+未使用の変数および未使用の代入値の数
 
 @subsection 内容
 
-使用されないにも関わらず宣言されている変数、および、値を割り当てた後に使用され
-ない変数の数を示します。
+一度も参照されない名前付き仮引数およびローカル変数と、後続の実行可能な制御フロー
+で値が読み取られない各書き込みの数を示します。単純代入、複合代入、インクリメント
+およびデクリメントは独立した書き込みとして数えます。変数は宣言ごとのスコープで
+区別し、分岐が合流した後の読み取りは到達可能な各代入値を使用済みと見なします。
+宣言の初期化子は宣言の一部として扱い、個別の代入には数えません。
 
 @subsection サンプルコード
 
@@ -36768,7 +36785,9 @@ MET,FN_UNUV,foo,"void foo(int,int)",test.c,1,6,3
 
 @subsection 内容
 
-関数内にて他の関数を呼び出す箇所数を示します。
+関数内の関数呼び出し式構造の数を示します。これは構文上の呼び出し箇所数であり、
+入れ子、間接呼び出し、再帰呼び出し、および評価されない式内の呼び出しも、それぞれ
+1 と数えます。
 
 @subsection サンプルコード
 
@@ -36805,7 +36824,9 @@ MET,FN_CSUB,baz,int baz(int),test.c,5,5,3
 
 @subsection 内容
 
-該当する関数がプロジェクト中の他の関数から呼び出される箇所数を示します。
+対象関数をプロジェクト内で直接または間接に呼び出す、異なる関数定義の数を示します。
+同一の呼び出し元に複数の直接呼び出し箇所があっても 1 と数えます。再帰および
+相互再帰も含めますが、プロジェクト関数に解決できない呼び出しは含めません。
 
 @subsection サンプルコード
 
@@ -36850,7 +36871,8 @@ MET,FN_CALL,baz,void baz(void),test2.c,3,13,0
 
 @subsection 内容
 
-関数内に記された @code{goto} 文の数を示します。
+関数内の @code{goto} 文構造の数を示します。飛び先の識別、ネストの深さ、および
+到達可能性は、この数に影響しません。
 
 @subsection サンプルコード
 
@@ -36894,8 +36916,10 @@ MET,FN_GOTO,foo,int foo(int),test.c,1,5,2
 
 @subsection 内容
 
-実行される @code{return} 文の数、および、関数末尾にある暗黙の @code{return} 文
-の数を示します。
+関数内の明示的な @code{return} 文の数と、制御フロー上、関数末尾に到達可能な
+経路を持つ @code{void} 関数の暗黙の @code{return} 文 1 個の合計を示します。
+明示的な @code{return} 文は、到達不能な文も含めて構文上の文として数えます。
+非 @code{void} 関数には暗黙の @code{return} 文を加えません。
 
 @subsection サンプルコード
 
@@ -36915,7 +36939,7 @@ void foo(int i)
         }
     }
 
-    /* An implicit return from the function whose return type is void makes foo's FN_RETN * += 1 */
+    /* A reachable path to the end of this void function makes foo's FN_RETN += 1 */
 
     /* foo's FN_RETN == 3 */
 }
@@ -36956,12 +36980,13 @@ MET,FN_RETN,bar,int bar(int),test.c,20,5,3
 
 @subsection メトリック名
 
-関数内の完結していない @code{if-else} 文の数
+明示的な最終 @code{else} 節を持たない @code{else if} 文の数
 
 @subsection 内容
 
-関数内の @code{if-else} 文で、明示的な @code{else} 節を持たないものの数を示しま
-す。
+明示的な最終 @code{else} 節を持たない @code{else if} 文の数を示します。
+単独の @code{if} 文は数えません。完結していない @code{else if} 連鎖は、末尾の
+@code{else if} 文で 1 と数えます。
 
 @subsection サンプルコード
 
@@ -36988,7 +37013,7 @@ int foo(int i)
     else if (i == 4) {
         return 1;
     }
-    /* An implicit else clause makes foo's FN_UELS += 1 */
+    /* The missing final else clause makes foo's FN_UELS += 1 */
 
     return 5;
 
@@ -37010,11 +37035,21 @@ MET,FN_UELS,foo,int foo(int),test.c,1,5,1
 
 @subsection メトリック名
 
-関数内のネスティングの最深段数
+関数内の制御構造の最大ネスト深度
 
 @subsection 内容
 
-関数内で制御構造のネストが一番深い部分のネスト段数を示します。
+関数内の制御構造の最大ネスト深度を示します。関数本体の最上位文をレベル 0 とし、
+@code{if} 文、@code{switch}、@code{while}、@code{do}、@code{for} 文（C99 形式を
+含む）の制御対象文に入るごとにレベルを 1 増やします。@code{if}/@code{else if}/
+@code{else} の連鎖は、このメトリックでは 1 つの制御構造として扱い、@code{else if}
+の部分はネストレベルを増やしません。各分岐内にある制御構造は通常どおりレベルを
+増やします。
+
+波括弧、制御構造を伴わない複合文、@code{case}/@code{default} ラベル、および制御式
+の中の式は FN_NEST に加算しません。波括弧のない制御本体に対して、余分な人工的
+ネストレベルは加えません。FN_NEST は構文上のメトリックであり、到達不能な制御構造
+も数えます。
 
 @subsection サンプルコード
 
@@ -37078,7 +37113,10 @@ MET,FN_NEST,foo,void foo(int),test.c,1,6,4
 
 @subsection 内容
 
-関数の制御フロー内で考えられるすべての実行経路の数を示します。
+AdLint の抽象インタプリタが報告する、静的に可能と推定される実行経路数を示します。
+選択肢となる分岐は経路数を加算し、連続する分岐群は乗算します。@code{return} で
+終了した経路は後続の分岐群には進みません。ループは本体に入る経路と入らない経路で
+表し、任意回数の反復は列挙しません。
 
 @subsection サンプルコード
 
@@ -37229,11 +37267,16 @@ MET,FN_PATH,qux,int qux(int),test.c,80,12,6
 
 @subsection 内容
 
-McCabe(マッケーブ)の提唱したメトリックで、プログラムを構成する線上にある独立し
-たパスの数を示します。
+AdLint では、関数ごとの基準値 1 に、構文上の分岐点ごとに 1 を加えて
+FN_CYCM を算出します。分岐点として数えるのは、@code{if} 文（各
+@code{else if} を含む）、@code{case} ラベル、@code{while}、@code{do}、
+@code{for} 文（C99 形式を含む）、短絡評価の @code{&&} および @code{||} 式、
+ならびに条件演算子 @code{?:} です。
 
-計算式「@verb{.制御フローグラフのエッジ数 - ノード数 + 2.}」で算出し、関数中の分
-岐の数に 1 を足したものに等しくなります。
+@code{else}、@code{default}、@code{switch}、@code{goto}、@code{break}、
+@code{continue}、@code{return} は FN_CYCM に加算しません。これは McCabe
+スタイルを拡張した定義であり、定数条件や到達可能性の解析で実行されないと分かる
+場合でも、構文上存在する分岐点は数えます。
 
 @subsection サンプルコード
 
@@ -37296,7 +37339,7 @@ static int baz(int i)
 
 static int qux(int i)
 {
-    while (i < 5) {  /* An iteration does not grow the complexity */
+    while (i < 5) {  /* A while statement makes qux's FN_CYCM += 1 */
         if (i == 0) {  /* Complexity += 1 */
             return 0;
         }
@@ -37309,7 +37352,7 @@ static int qux(int i)
     }
     return 3;
 
-    /* qux's FN_CYCM == 4 */
+    /* qux's FN_CYCM == 5 */
 }
 @end verbatim
 
@@ -37317,7 +37360,7 @@ static int qux(int i)
 MET,FN_CYCM,foo,int foo(int),test.c,1,12,2
 MET,FN_CYCM,bar,int bar(int),test.c,13,12,4
 MET,FN_CYCM,baz,int baz(int),test.c,28,12,4
-MET,FN_CYCM,qux,int qux(int),test.c,54,12,4
+MET,FN_CYCM,qux,int qux(int),test.c,54,12,5
 @end example
 
 @subsection 対応バージョン

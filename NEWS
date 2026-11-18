@@ -21,6 +21,20 @@
 
 ++
 
+=== \AdLint 3.2.15 is released (2026-08-31)
+
+==== Changes since the 3.2.14 release
+
+* Refine the C built-in statement, unreachable-code, return-point, unused
+  value, and cyclomatic-complexity metrics.
+* Support valid unbraced switch bodies, including directly labelled
+  case and default clauses.
+* Add dedicated metric-verification fixtures and align the English and
+  Japanese user guides with the current metric definitions.
+
+See the file {ChangeLog}[https://github.com/yanoh/adlint/blob/master/ChangeLog]
+for more details.
+
 === \AdLint 3.2.14 is released (2014-05-10)
 
 ==== Changes since the 3.2.12 release

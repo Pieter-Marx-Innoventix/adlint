@@ -3378,12 +3378,61 @@ module Cc1 #:nodoc:
     def initialize
       super
       @executed = false
+      @control_flow_reachable = false
+      @flow_condition_recorded = false
+      @flow_may_be_true = false
+      @flow_may_be_false = false
+      @flow_fall_through_recorded = false
+      @flow_may_fall_through = false
     end
 
     attr_writer :executed
 
     def executed?
       @executed
+    end
+
+    # NOTE: This is intentionally distinct from +executed?+, which records
+    # the legacy abstract interpreter's execution result and is consumed by
+    # established code checks.  StatementReachability owns this value for the
+    # control-flow based metrics added after that interface was established.
+    attr_writer :control_flow_reachable
+
+    def control_flow_reachable?
+      @control_flow_reachable
+    end
+
+    # Records the feasible outcomes found by the abstract interpreter.  A
+    # statement can be interpreted in more than one abstract state, so the
+    # observations are accumulated rather than replaced.
+    def record_flow_condition(value)
+      @flow_condition_recorded = true
+      @flow_may_be_true ||= value.test_may_be_true.true?
+      @flow_may_be_false ||= value.test_may_be_false.true?
+    end
+
+    def flow_condition_recorded?
+      @flow_condition_recorded
+    end
+
+    def flow_may_be_true?
+      !@flow_condition_recorded || @flow_may_be_true
+    end
+
+    def flow_may_be_false?
+      !@flow_condition_recorded || @flow_may_be_false
+    end
+
+    # Records whether evaluation of an otherwise ordinary statement can
+    # continue at its lexical successor.  This preserves the interpreter's
+    # knowledge of calls such as abort(), exit(), and longjmp().
+    def record_flow_fall_through(may_fall_through)
+      @flow_fall_through_recorded = true
+      @flow_may_fall_through ||= may_fall_through
+    end
+
+    def flow_may_fall_through?
+      !@flow_fall_through_recorded || @flow_may_fall_through
     end
   end
 
@@ -3578,27 +3627,49 @@ module Cc1 #:nodoc:
       case_exprs = []
       default_stmt = nil
 
-      @statement.block_items.each do |item|
-        case item
-        when GenericLabeledStatement
-          item = item.statement
-          redo
+      switch_clause_labels(@statement).each do |label|
+        case label
         when CaseLabeledStatement
-          item.normalized_expression =
-            equal_to_expression(@expression, item.expression, item.location)
-          case_exprs.push(item.normalized_expression)
-          item = item.statement
-          redo
+          label.normalized_expression =
+            equal_to_expression(@expression, label.expression, label.location)
+          case_exprs.push(label.normalized_expression)
         when DefaultLabeledStatement
-          default_stmt = item
-          item = item.statement
-          redo
+          default_stmt = label
         end
       end
 
       if default_stmt
         default_stmt.normalized_expression =
           derive_default_clause_condition(case_exprs, default_stmt.location)
+      end
+    end
+
+    # A switch body is any statement, not necessarily a compound statement.
+    # Collect labels from that statement tree while excluding nested switches,
+    # whose case and default labels belong to the inner switch.
+    def switch_clause_labels(stmt)
+      case stmt
+      when SwitchStatement
+        []
+      when GenericLabeledStatement
+        switch_clause_labels(stmt.statement)
+      when CaseLabeledStatement, DefaultLabeledStatement
+        [stmt] + switch_clause_labels(stmt.statement)
+      when CompoundStatement
+        stmt.block_items.map { |item|
+          item.kind_of?(Statement) ? switch_clause_labels(item) : []
+        }.flatten
+      when IfStatement
+        switch_clause_labels(stmt.statement)
+      when IfElseStatement
+        switch_clause_labels(stmt.then_statement) +
+          switch_clause_labels(stmt.else_statement)
+      when WhileStatement, DoStatement
+        switch_clause_labels(stmt.statement)
+      when ForStatement, C99ForStatement
+        switch_clause_labels(stmt.body_statement)
+      else
+        []
       end
     end
 
@@ -3941,9 +4012,11 @@ module Cc1 #:nodoc:
     def initialize(id)
       super()
       @identifier = id
+      @target = nil
     end
 
     attr_reader :identifier
+    attr_accessor :target
 
     def inspect(indent = 0)
       " " * indent + "#{short_class_name} (#{@identifier.inspect})"
@@ -4015,6 +4088,7 @@ module Cc1 #:nodoc:
       @function_body = compound_stmt
       @symbol = sym_tbl.create_new_symbol(ObjectName, identifier)
       @type_declaration = build_type_declaration(dcl_specs, sym_tbl)
+      @may_fall_through = false
       build_label_references(compound_stmt)
     end
 
@@ -4023,6 +4097,14 @@ module Cc1 #:nodoc:
     attr_reader :function_body
     attr_reader :symbol
     attr_reader :type_declaration
+
+    # Set by StatementReachability after interpretation.  A true value means
+    # that at least one feasible path reaches the end of this function body.
+    attr_writer :may_fall_through
+
+    def may_fall_through?
+      @may_fall_through
+    end
 
     def identifier
       @declarator.identifier
@@ -4079,6 +4161,7 @@ module Cc1 #:nodoc:
           goto_stmt.identifier.value == label_name
         }.each do |goto_stmt|
           generic_labeled_stmt.referrers.push(goto_stmt)
+          goto_stmt.target = generic_labeled_stmt
         end
       end
     end

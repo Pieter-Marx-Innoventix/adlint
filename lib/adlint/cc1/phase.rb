@@ -35,6 +35,7 @@ require "adlint/cc1/lexer"
 require "adlint/cc1/parser"
 require "adlint/cc1/syntax"
 require "adlint/cc1/interp"
+require "adlint/cc1/reachability"
 require "adlint/cc1/util"
 
 module AdLint #:nodoc:
@@ -104,6 +105,7 @@ module Cc1 #:nodoc:
     private
     def do_execute(phase_ctxt, *)
       Program.new(phase_ctxt[:cc1_interpreter], phase_ctxt[:cc1_ast]).execute
+      StatementReachability.new(traits).execute(phase_ctxt[:cc1_ast])
       ValueDomain.clear_memos
     ensure
       DebugUtil.dump_syntax_tree(phase_ctxt)

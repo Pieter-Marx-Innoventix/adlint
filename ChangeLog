@@ -1,3 +1,22 @@
+Sun Aug 31 2026  Pieter Marx
+
+	* lib/adlint/version.rb: Release 3.2.15.
+	* lib/adlint/exam/c_builtin/cc1_metric.rb: Refine C built-in metric
+	  calculations.  Exclude declarations and for-header components
+	  from FL_STMT and FN_STMT; improve FN_UNRC, FN_RETN, and FN_UNUV;
+	  and align FN_UELS and FN_CYCM with their documented definitions.
+	* lib/adlint/cc1/reachability.rb, lib/adlint/cc1/syntax.rb,
+	  lib/adlint/exam/c_builtin/cc1_metric.rb: Add dedicated control-flow
+	  reachability state for the FN_UNRC metric, independently of the abstract
+	  interpreter's execution state.
+	* lib/adlint/cc1/syntax.rb, lib/adlint/cc1/interp.rb,
+	  lib/adlint/exam/c_builtin/cc1_check.rb: Support valid unbraced switch
+	  bodies, including directly labelled case and default clauses.
+	* metric-fixtures: Add metric-verification fixtures and edge cases.
+	* share/doc/users_guide_en.texi, share/doc/users_guide_ja.texi: Align
+	  metric definitions with the current implementation.
+	* NEWS: Announce the release.
+
 Sat May 10 22:31:55 2014  Yutaka Yanoh  <yanoh@users.sourceforge.net>
 
 	* release.ga : 3.2.14

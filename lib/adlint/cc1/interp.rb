@@ -1024,7 +1024,11 @@ module Cc1 #:nodoc:
       node.executed = true
       notify_expression_stmt_started(node)
 
-      interpret(node.expression) if node.expression
+      break_event = BreakEvent.catch do
+        interpret(node.expression) if node.expression
+      end
+      node.record_flow_fall_through(!break_event)
+      break_event.throw if break_event
     ensure
       notify_expression_stmt_ended(node)
     end
@@ -1047,6 +1051,7 @@ module Cc1 #:nodoc:
         ctrlexpr = orig_ctrlexpr.to_normalized_logical
       end
       notify_if_ctrlexpr_evaled(node, ctrlexpr_val)
+      node.record_flow_condition(ctrlexpr_val)
 
       case
       when ctrlexpr_val.test_must_be_true.true?
@@ -1081,6 +1086,7 @@ module Cc1 #:nodoc:
         ctrlexpr = orig_ctrlexpr.to_normalized_logical
       end
       notify_if_else_ctrlexpr_evaled(node, ctrlexpr_val)
+      node.record_flow_condition(ctrlexpr_val)
 
       case
       when ctrlexpr_val.test_must_be_true.true?
@@ -1117,6 +1123,7 @@ module Cc1 #:nodoc:
       notify_variable_value_referred(node.expression, ctrlexpr_var)
       notify_sequence_point_reached(SequencePoint.new(node.expression))
       notify_while_ctrlexpr_evaled(node, ctrlexpr_val)
+      node.record_flow_condition(ctrlexpr_val)
 
       orig_ctrlexpr, ctrlexpr = node.deduct_controlling_expression
 
@@ -1166,6 +1173,7 @@ module Cc1 #:nodoc:
       notify_variable_value_referred(node.expression, ctrlexpr_var)
       notify_sequence_point_reached(SequencePoint.new(node.expression))
       notify_do_ctrlexpr_evaled(node, ctrlexpr_val)
+      node.record_flow_condition(ctrlexpr_val)
     ensure
       notify_do_stmt_ended(node)
     end
@@ -1183,6 +1191,7 @@ module Cc1 #:nodoc:
       else
         ctrlexpr_val = scalar_value_of_true
       end
+      node.record_flow_condition(ctrlexpr_val)
 
       case
       when ctrlexpr_val.test_must_be_true.true?
@@ -1208,6 +1217,7 @@ module Cc1 #:nodoc:
         else
           ctrlexpr_val = scalar_value_of_true
         end
+        node.record_flow_condition(ctrlexpr_val)
 
         case
         when ctrlexpr_val.test_must_be_true.true?
@@ -1223,7 +1233,10 @@ module Cc1 #:nodoc:
     def visit_goto_statement(node)
       checkpoint(node.location)
 
-      # TODO: Must implement goto semantics.
+      # NOTE: Exact transfer to node.target is applied by
+      #       StatementReachability after abstract interpretation.  Continuing
+      #       lexically here retains conservative value-domain information for
+      #       the reachability pass and the existing code checks.
       node.executed = true
       notify_goto_stmt_evaled(node, node.identifier.value)
     end
@@ -1482,14 +1495,21 @@ module Cc1 #:nodoc:
     def execute_switch_body(var, node)
       checkpoint(node.location)
 
-      node.executed = true
-      scoped_eval do
-        begin
-          notify_block_started(node)
-          execute_switch_branches(var, node.block_items)
-        ensure
-          notify_block_ended(node)
+      if node.kind_of?(CompoundStatement)
+        node.executed = true
+        scoped_eval do
+          begin
+            notify_block_started(node)
+            execute_switch_branches(var, node.block_items)
+          ensure
+            notify_block_ended(node)
+          end
         end
+      else
+        # A switch body may be any statement.  A directly labelled body has
+        # no compound scope and its labels must be marked executed only when
+        # their branch is selected.
+        execute_switch_branches(var, [node])
       end
     end
 
@@ -1500,7 +1520,9 @@ module Cc1 #:nodoc:
         base_opts = [SMOTHER_BREAK, IMPLICIT_COND, NARROWING]
       end
 
-      idx = 0
+      idx = seek_first_branch(block_items)
+      return unless idx
+
       while block_item = block_items[idx]
         case block_item
         when GenericLabeledStatement
@@ -1526,6 +1548,7 @@ module Cc1 #:nodoc:
     def execute_branch(labeled_stmt, block_items, idx, branch_opts)
       ctrlexpr = labeled_stmt.normalized_expression
       ctrlexpr_val = value_of(interpret(ctrlexpr, QUIET))
+      labeled_stmt.record_flow_condition(ctrlexpr_val)
 
       case labeled_stmt
       when DefaultLabeledStatement
@@ -1644,7 +1667,22 @@ module Cc1 #:nodoc:
       while block_item = block_items[idx]
         case block_item
         when GenericLabeledStatement
-          notify_label_defined(block_item)
+          block_item = block_item.statement
+          redo
+        when CaseLabeledStatement, DefaultLabeledStatement
+          return idx
+        else
+          idx += 1
+        end
+      end
+      nil
+    end
+
+    def seek_first_branch(block_items)
+      idx = 0
+      while block_item = block_items[idx]
+        case block_item
+        when GenericLabeledStatement
           block_item = block_item.statement
           redo
         when CaseLabeledStatement, DefaultLabeledStatement

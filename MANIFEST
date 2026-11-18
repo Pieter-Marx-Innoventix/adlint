@@ -390,6 +390,7 @@ lib/adlint/cc1/option.rb
 lib/adlint/cc1/parser.rb
 lib/adlint/cc1/parser.y
 lib/adlint/cc1/phase.rb
+lib/adlint/cc1/reachability.rb
 lib/adlint/cc1/resolver.rb
 lib/adlint/cc1/scanner.rb
 lib/adlint/cc1/scope.rb

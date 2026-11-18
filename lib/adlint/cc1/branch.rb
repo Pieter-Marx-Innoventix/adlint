@@ -108,13 +108,17 @@ module Cc1 #:nodoc:
         #       manage value domains of controlling variables related with each
         #       other.
         if @group.in_iteration? && !smother_break?
-          env.end_versioning(break_with_return? || break_with_break?, true)
+          terminated = break_with_return? || break_with_break? ||
+            break_with_continue?
+          env.end_versioning(terminated, true)
         else
           env.end_versioning(break_with_return?, true)
         end
       else
         if @group.in_iteration? && !smother_break?
-          env.end_versioning(break_with_return? || break_with_break?, false)
+          terminated = break_with_return? || break_with_break? ||
+            break_with_continue?
+          env.end_versioning(terminated, false)
         else
           env.end_versioning(break_with_return?, false)
         end
@@ -165,6 +169,8 @@ module Cc1 #:nodoc:
       case
       when @group.all_branches_break_with_break?
         BreakEvent.of_break.throw unless smother_break?
+      when @group.all_branches_break_with_continue?
+        BreakEvent.of_continue.throw
       when @group.all_branches_break_with_return?
         BreakEvent.of_return.throw
       end

@@ -2309,13 +2309,13 @@ func_metric_name
   | "FN_UNRC"  <- Number of unreached statements
   | "FN_LINE"  <- Number of lines
   | "FN_PARA"  <- Number of parameters
-  | "FN_UNUV"  <- Number of not use /not reuse variables
+  | "FN_UNUV"  <- Number of unused variables and unused assigned values
   | "FN_CSUB"  <- Location number of call function
   | "FN_CALL"  <- Location number of called from function
   | "FN_GOTO"  <- Number of goto statement
-  | "FN_RETN"  <- Number of return point in a function
-  | "FN_UELS"  <- Number of 'if' statement unless 'else'
-  | "FN_NEST"  <- Maximum number of nest of control flow graph
+  | "FN_RETN"  <- Number of return points in a function
+  | "FN_UELS"  <- Number of terminal else-if statements without a final else
+  | "FN_NEST"  <- Maximum nesting depth of control structures
   | "FN_PATH"  <- Presumed  number of static path
   | "FN_CYCM"  <- Cyclomatic complexity
 
@@ -35978,13 +35978,13 @@ int foo(int i)
 * FN_UNRC::Number of unreached statements
 * FN_LINE::Number of lines
 * FN_PARA::Number of parameters
-* FN_UNUV::Number of not use /not reuse variables
+* FN_UNUV::Number of unused variables and unused assigned values
 * FN_CSUB::Location number of call function
 * FN_CALL::Location number of called from function
 * FN_GOTO::Number of goto statement
-* FN_RETN::Number of return point in a function
-* FN_UELS::Number of 'if' statement unless 'else'
-* FN_NEST::Maximum number of nest of control flow graph
+* FN_RETN::Number of return points in a function
+* FN_UELS::Number of terminal else-if statements without a final else
+* FN_NEST::Maximum nesting depth of control structures
 * FN_PATH::Presumed  number of static path
 * FN_CYCM::Cyclomatic complexity
 @end menu
@@ -35998,7 +35998,9 @@ Number of statements
 
 @subsection Content
 
-The number which it recognized as statements by syntax rule in a file.
+The number of non-compound C statement constructs in a file.  Declarations and
+function definitions do not count.  Each @code{for} construct counts once;
+its initializer, condition, and increment do not count separately.
 
 @subsection Sample code
 
@@ -36025,7 +36027,7 @@ void bar(int a)
         int i;
     } s;
 
-    /* A for-statement which has 2 expression-statements (`s.i=0;' and `s.i<a;') makes FL_STMT += 3 */
+    /* The complete for-statement makes FL_STMT += 1 */
     for (s.i = 0; s.i < a; s.i++) {
         switch (s.i % 3) {  /* A switch-statement makes FL_STMT += 1 */
         case 0:             /* A label is part of a labeled-statement, but it makes FL_STMT += 1 */
@@ -36041,11 +36043,11 @@ void bar(int a)
     }
 }
 
-/* Finally, FL_STMT == 17 */
+/* Finally, FL_STMT == 15 */
 @end verbatim
 
 @example
-MET,FL_STMT,test.c,17
+MET,FL_STMT,test.c,15
 @end example
 
 @subsection Since
@@ -36061,7 +36063,9 @@ Number of functions
 
 @subsection Content
 
-The number of function which defined in a file.
+The number of ANSI or K&R function-definition constructs that originate in a
+source file.  Declarations, prototypes, function types, function pointers,
+and aggregate members do not count.
 
 @subsection Sample code
 
@@ -36098,7 +36102,9 @@ Number of statements
 
 @subsection Content
 
-The number which it recognized as statements by syntax rule in a function.
+The number of non-compound C statement constructs in a function.  Declarations
+do not count.  Each @code{for} construct counts once; its initializer,
+condition, and increment do not count separately.
 
 @subsection Sample code
 
@@ -36125,7 +36131,7 @@ void bar(int a)
         int i;
     } s;
 
-    /* A for-statement which has 2 expression-statements (`s.i=0;' and * `s.i<a;') makes bar's FN_STMT += 3 */
+    /* The complete for-statement makes bar's FN_STMT += 1 */
     for (s.i = 0; s.i < a; s.i++) {
         switch (s.i % 3) {  /* A switch-statement makes bar's FN_STMT += 1 */
         case 0:             /* A label is part of a labeled-statement, but it makes bar's FN_STMT += 1 */
@@ -36140,13 +36146,13 @@ void bar(int a)
         }
     }
 
-    /* bar's FN_STMT == 13 */
+    /* bar's FN_STMT == 11 */
 }
 @end verbatim
 
 @example
 MET,FN_STMT,foo,int foo(int),test.c,1,5,4
-MET,FN_STMT,bar,void bar(int),test.c,14,6,13
+MET,FN_STMT,bar,void bar(int),test.c,14,6,11
 @end example
 
 @subsection Since
@@ -36162,7 +36168,16 @@ Number of unreached statements
 
 @subsection Content
 
-The number of statements which it not run in any condition.
+The number of statements that cannot be reached on any feasible control-flow
+path through the function.  FN_UNRC uses the same statement population as
+FN_STMT: declarations are excluded, and a @code{for} statement is counted once
+without counting its initializer or controlling expression separately.
+
+Reachability accounts for @code{return}, @code{break}, @code{continue},
+@code{goto}, @code{switch} dispatch, conditions whose result can be determined,
+and loops that cannot fall through.  An unreachable control or labeled
+statement and each unreachable statement nested inside it are counted
+individually.
 
 @subsection Sample code
 
@@ -36233,7 +36248,10 @@ Number of lines
 
 @subsection Content
 
-Physical lines from the beginning of a line to the end of a line in a function definition.
+The inclusive physical-line span from the line containing the function
+identifier through the line containing the function body's closing brace.
+Text before the identifier is excluded; blank lines, comments, and inactive
+preprocessor lines inside that span are included.
 
 @subsection Sample code
 
@@ -36284,7 +36302,10 @@ Number of parameters
 
 @subsection Content
 
-The number of formal arguments in the argument list of function declaration.
+The number of named formal parameters declared by a function definition.  A
+@code{void} parameter marker and an unspecified empty parameter list count as
+zero; an ellipsis is not an additional named parameter.  ANSI and K&R
+definitions are both measured.
 
 @subsection Sample code
 
@@ -36319,11 +36340,17 @@ MET,FN_PARA,bar,"int bar(int,long,char *)",test.c,6,5,3
 
 @subsection Metric name
 
-Number of not use /not reuse variables
+Number of unused variables and unused assigned values
 
 @subsection Content
 
-The number of not used function and variables which assigned the value.
+The number of named parameters and local variables that are never referenced,
+plus each later write whose resulting value is not subsequently read. Simple
+and compound assignments, and increment and decrement forms, are counted as
+independent writes. Variables are distinguished by their declaring scope; when
+control-flow branches join, a later read uses every assigned value that can
+reach it. A declaration initializer is treated as part of its declaration, not
+as a separate assignment.
 
 @subsection Sample code
 
@@ -36365,7 +36392,9 @@ Location number of call function
 
 @subsection Content
 
-The number of calling other function in a function,
+The number of function-call-expression constructs in a function.  This is a
+syntactic call-site count: nested, indirect, recursive, and unevaluated call
+expressions each count once.
 
 @subsection Sample code
 
@@ -36400,7 +36429,10 @@ Location number of called from function
 
 @subsection Content
 
-The number of called from other function of the project.
+The number of distinct project functions that directly or transitively call
+the subject function.  Multiple direct call sites from one caller count once;
+recursive and mutually recursive functions are included.  Calls that cannot
+be resolved to a project function are not included.
 
 @subsection Sample code
 
@@ -36444,7 +36476,8 @@ Number of @code{goto} statement
 
 @subsection Content
 
-The number of @code{goto} statement in a function.
+The number of @code{goto}-statement constructs in a function.  Target
+identity, nesting, and reachability do not alter the count.
 
 @subsection Sample code
 
@@ -36483,12 +36516,15 @@ MET,FN_GOTO,foo,int foo(int),test.c,1,5,2
 @cindex FN_RETN
 
 @subsection Metric name
-Number of return point in a function
+Number of return points in a function
 
 @subsection Content
 
-The number of executable return-statements and implicit return-statements
-at the end of a function.
+The number of explicit return-statements in a function, plus one implicit
+return-statement when a void function has a feasible control-flow path that
+falls through its end.  Explicit return-statements are counted syntactically,
+including unreachable ones.  Non-void functions do not receive an implicit
+return-statement.
 
 @subsection Sample code
 
@@ -36508,7 +36544,7 @@ void foo(int i)
         }
     }
 
-    /* An implicit return from the function whose return type is void makes foo's FN_RETN * += 1 */
+    /* A reachable path to the end of this void function makes foo's FN_RETN += 1 */
 
     /* foo's FN_RETN == 3 */
 }
@@ -36548,11 +36584,13 @@ MET,FN_RETN,bar,int bar(int),test.c,20,5,3
 @cindex FN_UELS
 
 @subsection Metric name
-Number of if-statement without else-clause
+Number of else-if statements without a final else-clause
 
 @subsection Content
 
-The number of if-statements which have no explicit else-clause.
+The number of else-if statements that have no explicit final else-clause.
+A standalone if-statement does not contribute.  Each incomplete else-if chain
+contributes once, at its terminal else-if statement.
 
 @subsection Sample code
 
@@ -36579,7 +36617,7 @@ int foo(int i)
     else if (i == 4) {
         return 1;
     }
-    /* An implicit else clause makes foo's FN_UELS += 1 */
+    /* The missing final else clause makes foo's FN_UELS += 1 */
 
     return 5;
 
@@ -36600,11 +36638,23 @@ MET,FN_UELS,foo,int foo(int),test.c,1,5,1
 @cindex FN_NEST
 
 @subsection Metric name
-Maximum number of nest of control flow graph
+Maximum nesting depth of control structures
 
 @subsection Content
 
-The deepest nesting of control structure in a function.
+The maximum nesting depth of control structures in a function.  The
+function body's top-level statements have level 0.  Each @code{if} statement,
+@code{switch}, @code{while}, @code{do}, or @code{for} statement (including
+C99 @code{for}) increases the level by 1 while its controlled statement is
+traversed.  An @code{if}/@code{else if}/@code{else} chain is one control
+structure: its @code{else if} arms do not add nesting levels.  A control
+structure within any arm increases the level normally.
+
+Braces, plain compound blocks, @code{case}/@code{default} labels, and
+expressions in control headers do not increase FN_NEST.  An unbraced control
+body does not receive an extra synthetic nesting level.  FN_NEST is
+structural: syntactically present control structures are counted even when
+unreachable.
 
 @subsection Sample code
 
@@ -36667,7 +36717,11 @@ Presumed  number of static path
 
 @subsection Content
 
-The number of possible execute paths in a function.
+The presumed number of statically possible execution paths reported by
+AdLint's abstract interpreter.  Alternative branches add paths, sequential
+branch groups multiply them, and paths ended by @code{return} do not continue
+into later groups.  A loop is represented by entering or skipping its body;
+arbitrary iteration counts are not enumerated.
 
 @subsection Sample code
 
@@ -36817,13 +36871,18 @@ Cyclomatic complexity
 
 @subsection Content
 
-The number of linearly independent paths through a program's source code.
-It was developed by McCabe.
+AdLint calculates FN_CYCM syntactically as a base value of 1 for every
+function, plus 1 for each decision point.  The counted decision points are
+@code{if} statements (including each @code{else if}), @code{case} labels,
+@code{while}, @code{do}, and @code{for} statements (including C99
+@code{for} statements), short-circuit @code{&&} and @code{||} expressions,
+and conditional @code{?:} expressions.
 
-@*
-calculating formula is
-@verb{.(the number of edges of the graph) - (the number of nodes of the graph) + 2.}.
-It equals the number of branch in a function + 1.
+@code{else}, @code{default}, @code{switch}, @code{goto}, @code{break},
+@code{continue}, and @code{return} do not add to FN_CYCM.  This is an
+expanded McCabe-style definition: syntactically present decision points are
+counted even when a constant condition or reachability analysis shows that a
+path cannot execute.
 
 @subsection Sample code
 
@@ -36886,7 +36945,7 @@ static int baz(int i)
 
 static int qux(int i)
 {
-    while (i < 5) {  /* An iteration does not grow the complexity */
+    while (i < 5) {  /* A while statement makes qux's FN_CYCM += 1 */
         if (i == 0) {  /* Complexity += 1 */
             return 0;
         }
@@ -36899,7 +36958,7 @@ static int qux(int i)
     }
     return 3;
 
-    /* qux's FN_CYCM == 4 */
+    /* qux's FN_CYCM == 5 */
 }
 @end verbatim
 
@@ -36907,7 +36966,7 @@ static int qux(int i)
 MET,FN_CYCM,foo,int foo(int),test.c,1,12,2
 MET,FN_CYCM,bar,int bar(int),test.c,13,12,4
 MET,FN_CYCM,baz,int baz(int),test.c,28,12,4
-MET,FN_CYCM,qux,int qux(int),test.c,54,12,4
+MET,FN_CYCM,qux,int qux(int),test.c,54,12,5
 @end example
 
 

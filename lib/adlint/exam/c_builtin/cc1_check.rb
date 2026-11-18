@@ -144,6 +144,10 @@ module CBuiltin #:nodoc:
 
     private
     def enter_switch_statement(node)
+      # A non-compound switch body has no independent sequence of clauses to
+      # inspect for fall-through.
+      return unless node.statement.kind_of?(Cc1::CompoundStatement)
+
       prv_item = nil
       node.statement.block_items.each do |item|
         if prv_item
