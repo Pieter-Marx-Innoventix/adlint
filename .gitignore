@@ -1,0 +1,21 @@
+# Build output
+/pkg/
+/rdoc/
+
+# Test output
+/cucumber-tmp/
+/features.html
+/spec.html
+
+# Generated parsers
+/lib/adlint/cc1/parser.rb
+/lib/adlint/cpp/constexpr.rb
+
+# Generated documentation
+/share/doc/*.html
+/share/doc/c99gram.pdf
+
+# Development tools and local settings
+/tags
+*.output
+/.claude/
