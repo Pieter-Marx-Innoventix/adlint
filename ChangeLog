@@ -1,21 +1,43 @@
-Sun Aug 31 2026  Pieter Marx
+Wed Nov 18 2026  Pieter Marx  <pietermarx@innoventix.co.za>
 
-	* lib/adlint/version.rb: Release 3.2.15.
-	* lib/adlint/exam/c_builtin/cc1_metric.rb: Refine C built-in metric
-	  calculations.  Exclude declarations and for-header components
-	  from FL_STMT and FN_STMT; improve FN_UNRC, FN_RETN, and FN_UNUV;
-	  and align FN_UELS and FN_CYCM with their documented definitions.
-	* lib/adlint/cc1/reachability.rb, lib/adlint/cc1/syntax.rb,
-	  lib/adlint/exam/c_builtin/cc1_metric.rb: Add dedicated control-flow
-	  reachability state for the FN_UNRC metric, independently of the abstract
-	  interpreter's execution state.
-	* lib/adlint/cc1/syntax.rb, lib/adlint/cc1/interp.rb,
-	  lib/adlint/exam/c_builtin/cc1_check.rb: Support valid unbraced switch
-	  bodies, including directly labelled case and default clauses.
+	* ChangeLog : Correct the record of the existing local metric changes.
+	* NEWS : Describe the metric and analyzer changes explicitly, mark the
+	  fork changes as unreleased, and warn that stored metric baselines and
+	  thresholds may need adjustment. Use local ChangeLog links.
+
+Mon Aug 31 2026  Pieter Marx  <pietermarx@innoventix.co.za>
+
+	* lib/adlint/version.rb : Set the local version identifier to 3.2.15
+	  (2026-08-31). The final fork release number remains to be decided.
+	* lib/adlint/exam/c_builtin/cc1_metric.rb : Revise metric calculations.
+	  Count each for-statement once in FL_STMT, FN_STMT and FN_UNRC,
+	  excluding its initializer and condition helper statements. Count an
+	  implicit return in FN_RETN only when the end of a void function is
+	  reachable. Count unread assignments and unreferenced local variables
+	  and parameters in FN_UNUV, tracking shadowed variables separately by
+	  declaration identity and improving handling of branch joins and
+	  branches terminated by return. Measure FN_NEST by control structures
+	  instead of braces, counting an if/else-if/else chain as one level.
+	  Extend FN_CYCM to count loops, logical && and || expressions, and
+	  conditional ?: expressions as syntactic decision points.
+	* lib/adlint/cc1/reachability.rb : New statement-level control-flow
+	  reachability pass used by FN_UNRC and FN_RETN.
+	* lib/adlint/cc1/phase.rb : Run the reachability pass after interpretation.
+	* lib/adlint/cc1/syntax.rb : Record control-flow observations, link goto
+	  statements to their labels, and collect switch labels from any
+	  statement body.
+	* lib/adlint/cc1/interp.rb : Record control-flow observations and support
+	  switch statements whose bodies are not compound statements.
+	* lib/adlint/cc1/branch.rb : End a branch on continue within an iteration.
+	* lib/adlint/exam/c_builtin/cc1_check.rb : Skip W0007 checking for a
+	  switch whose body is not a compound statement.
+	* MANIFEST : Include the new reachability module.
 	* metric-fixtures: Add metric-verification fixtures and edge cases.
-	* share/doc/users_guide_en.texi, share/doc/users_guide_ja.texi: Align
-	  metric definitions with the current implementation.
-	* NEWS: Announce the release.
+	* BUILDING_ADLINT_GEM.md : Add Windows gem-building instructions.
+	* share/doc/users_guide_en.texi, share/doc/users_guide_ja.texi : Revise
+	  metric definitions and examples. Clarify FN_UELS and FN_PATH without
+	  changing their metric calculation code.
+	* NEWS : Describe the local changes.
 
 Sat May 10 22:31:55 2014  Yutaka Yanoh  <yanoh@users.sourceforge.net>
 

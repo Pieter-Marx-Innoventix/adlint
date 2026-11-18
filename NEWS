@@ -21,19 +21,50 @@
 
 ++
 
-=== \AdLint 3.2.15 is released (2026-08-31)
+=== Unreleased changes based on \AdLint 3.2.14
 
-==== Changes since the 3.2.14 release
+These changes belong to a maintained fork based on the 3.2.14 release.
+The fork's release number and release date have not yet been finalised.
+The historical release candidates 3.2.15, 3.2.17 and 3.2.19 are not included.
 
-* Refine the C built-in statement, unreachable-code, return-point, unused
-  value, and cyclomatic-complexity metrics.
-* Support valid unbraced switch bodies, including directly labelled
-  case and default clauses.
-* Add dedicated metric-verification fixtures and align the English and
-  Japanese user guides with the current metric definitions.
+==== Metric calculation changes
 
-See the file {ChangeLog}[https://github.com/yanoh/adlint/blob/master/ChangeLog]
-for more details.
+* FL_STMT and FN_STMT count each for-statement once, without counting its
+  initializer and condition helper statements separately.
+* FN_UNRC uses a dedicated statement-reachability pass that follows goto
+  targets, break, continue, return and switch dispatch, using observations
+  from the interpreter to account for feasible conditions and calls that
+  do not return.
+* FN_RETN adds an implicit return for a void function only when the end of
+  the function is reachable.
+* FN_UNUV tracks variables by declaration identity, so shadowed declarations
+  are counted separately. It counts unread assignments and unreferenced
+  local variables and parameters, with improved handling of branch joins
+  and branches terminated by return. Declaration initializers are not
+  counted as separate writes.
+* FN_NEST measures control-structure depth rather than brace depth. Braced
+  and unbraced control bodies are treated consistently, plain blocks do
+  not increase depth, and an if/else-if/else chain counts as one level.
+* FN_CYCM counts one plus each if, case label, loop, logical && or ||
+  expression, and conditional ?: expression. Decisions are counted
+  syntactically, including those with constant conditions.
+
+These metrics can give different values from 3.2.14 for the same source.
+Review stored metric baselines and thresholds when adopting these changes.
+
+==== Analyzer and documentation changes
+
+* Support valid unbraced switch bodies, including directly labelled case
+  and default clauses; skip W0007 checking for non-compound switch bodies.
+* End an interpreter branch on a continue-statement within an iteration.
+* Record control-flow observations and link goto statements to their
+  labels for the reachability pass. The abstract interpreter itself still
+  processes source statements in lexical order after a goto.
+* Add 16 metric-verification fixtures and Windows gem-building instructions.
+* Revise the English and Japanese metric definitions and examples,
+  including clarification of FN_UELS and FN_PATH.
+
+See the file {ChangeLog}[ChangeLog] for more details.
 
 === \AdLint 3.2.14 is released (2014-05-10)
 
@@ -41,8 +72,7 @@ for more details.
 
 * Support function-like macro replacement with variable arguments.
 
-See the file {ChangeLog}[https://github.com/yanoh/adlint/blob/master/ChangeLog]
-for more details.
+See the file {ChangeLog}[ChangeLog] for more details.
 
 === \AdLint 3.2.12 is released (2014-04-12)
 
