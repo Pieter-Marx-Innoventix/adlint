@@ -1,3 +1,21 @@
+Fri Nov 20 2026  Pieter Marx  <pietermarx@innoventix.co.za>
+
+	* features/metric_measurement/fixtures.feature,
+	  features/metric_measurement/FN_UNUV.feature,
+	  features/step_definitions/metric_steps.rb : Check all public metric
+	  fixtures through the normal feature suite. Run the paired FN_CALL
+	  inputs through single- and cross-module analysis and cross-check
+	  sum(FN_STMT) against FL_STMT. Copy inputs unchanged to fresh directories
+	  and fail on analyzer errors instead of accepting stale output.
+	* features/support/metric_fixture.rb, spec/metric_fixture_spec.rb :
+	  Parse fixture-header expectations and reject missing, unexpected,
+	  duplicate, malformed or mismatched results, including zero values.
+	* metric-fixtures/README.md, features/metric_measurement/TODO : Document
+	  the authoritative fixtures, commands and verification limits.
+	* MANIFEST : Include the remaining C fixtures, checker, tests and README.
+	* NEWS : Describe the automated metric coverage. Analyzer behaviour,
+	  version identity and the installed wrapper qualification gem unchanged.
+
 Thu Nov 19 2026  Pieter Marx  <pietermarx@innoventix.co.za>
 
 	* lib/adlint/version.rb : Set the release reporting identity to 3.4.0

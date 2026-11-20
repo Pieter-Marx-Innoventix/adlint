@@ -3,6 +3,8 @@ Feature: Values read on later loop iterations
   retaining unread assignments that are overwritten or leave the loop.
 
   Scenario: Count loop-carried values and genuinely unused assignments
-    Given the FN_UNUV loop verification fixture
-    When I successfully run `adlint fn_unuv_loops.c` on noarch
-    Then the FN_UNUV results should match the fixture expectations
+    Given the metric verification fixtures:
+      | metric  | file            |
+      | FN_UNUV | fn_unuv_loops.c |
+    When I analyse the metric fixtures
+    Then the metric results should match the fixture expectations

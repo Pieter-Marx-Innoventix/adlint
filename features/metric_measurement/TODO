@@ -1,1 +1,5 @@
-Must write functional specifications about the metric measurement feature.
+The public metric fixtures are checked by FN_UNUV.feature and fixtures.feature.
+See metric-fixtures/README.md for expectations, commands and verification scope.
+
+Extend the fixtures when new cases or metric-definition changes are agreed.
+Additional metrics and inherited interpreter limitations remain audit work.
