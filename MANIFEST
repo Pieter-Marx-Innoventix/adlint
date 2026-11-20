@@ -1,10 +1,12 @@
 AUTHORS
+BUILDING_ADLINT_GEM.md
 COPYING
 ChangeLog
 INSTALL
 MANIFEST
 NEWS
 README
+README.md
 Rakefile
 TODO
 bin/adlint
@@ -364,8 +366,10 @@ features/code_check/W1077.feature
 features/code_check/W9001.feature
 features/code_check/W9003.feature
 features/code_extraction/TODO
+features/metric_measurement/FN_UNUV.feature
 features/metric_measurement/TODO
 features/step_definitions/code_check_steps.rb
+features/step_definitions/metric_steps.rb
 features/support/env.rb
 lib/adlint.rb
 lib/adlint/analyzer.rb
@@ -447,6 +451,7 @@ lib/adlint/token.rb
 lib/adlint/traits.rb
 lib/adlint/util.rb
 lib/adlint/version.rb
+metric-fixtures/fn_unuv_loops.c
 share/HEADER
 share/demo/Makefile
 share/demo/ambig_operator/ambig_operator.c

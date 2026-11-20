@@ -19,6 +19,7 @@
 # You should have received a copy of the GNU General Public License along with
 # AdLint.  If not, see <http://www.gnu.org/licenses/>.
 #
+# Modified 2026-11-19: Innoventix fork metadata; see ChangeLog.
 #++
 
 require "rubygems/package_task"
@@ -37,17 +38,18 @@ gemspec = Gem::Specification.new do |s|
   s.name        = "adlint"
   s.version     = AdLint::SHORT_VERSION
   s.date        = AdLint::RELEASE_DATE
-  s.homepage    = "http://adlint.sourceforge.net/"
+  s.homepage    = AdLint::HOMEPAGE
   s.licenses    = ["GPLv3+: GNU General Public License version 3 or later"]
-  s.author      = "Yutaka Yanoh"
-  s.email       = "yanoh@users.sourceforge.net"
+  s.authors     = ["Yutaka Yanoh", "Pieter Marx (Innoventix)"]
+  s.email       = "pietermarx@innoventix.co.za"
   s.summary     = <<EOS
-AdLint :: Advanced Lint - An open source and free source code static analyzer
+AdLint :: Advanced Lint - Innoventix maintained fork
 EOS
   s.description = <<EOS
 AdLint is a source code static analyzer.
 It can point out unreliable or nonportable code fragments, and can measure various quality metrics of the source code.
 It (currently) can analyze source code compliant with ANSI C89 / ISO C90 and partly ISO C99.
+This is the Innoventix maintained fork, based on AdLint #{AdLint::BASE_VERSION}.
 EOS
 
   s.required_ruby_version = Gem::Requirement.new(">= 1.9.3")
@@ -70,7 +72,8 @@ EOS
  /_/  |_|_____/_____/_/_/ |_/  /_/    Copyright (C) 2010-2014, OGIS-RI Co.,Ltd.
 
                          Thanks for installing AdLint!
-     Please visit our project homepage at <http://adlint.sourceforge.net/>.
+       #{AdLint::FORK_NAME} maintained fork, based on AdLint #{AdLint::BASE_VERSION}.
+       #{AdLint::HOMEPAGE}
 
 -------------------------------------------------------------------------------
 EOS

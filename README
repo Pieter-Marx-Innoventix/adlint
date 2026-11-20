@@ -21,7 +21,7 @@
 
 ++
 
-== \AdLint - Advanced Lint
+== \AdLint 3.4.0 - Advanced Lint - Innoventix fork
 
 \AdLint is a source code static analyzer.
 
@@ -31,8 +31,12 @@ various quality metrics of the source code.
 It (currently) can analyze source code compliant with ANSI C89 / ISO C90 and
 partly ISO C99.
 
-For more details, visit our project homepage at
-<{http\://adlint.sourceforge.net/}[http://adlint.sourceforge.net/]>.
+This is the Innoventix maintained fork, based on \AdLint 3.2.14, originally
+written by Yutaka Yanoh and OGIS-RI Co.,Ltd. The version date is 2026-11-19.
+The maintainer contact is Pieter Marx <pietermarx@innoventix.co.za>.
+
+For more details, visit
+<{https\://github.com/Pieter-Marx-Innoventix/adlint}[https://github.com/Pieter-Marx-Innoventix/adlint]>.
 
 == How to Install
 
@@ -57,9 +61,9 @@ You should have received a copy of the GNU General Public License along with
 
 == Further Reading
 
-* {User's Guide (in Japanese)}[http://adlint.sourceforge.net/pmwiki/upload.d/Main/users_guide_ja.html]
-* {User's Guide (in English)}[http://adlint.sourceforge.net/pmwiki/upload.d/Main/users_guide_en.html]
-* {Developer's Guide (in Japanese)}[http://adlint.sourceforge.net/pmwiki/upload.d/Main/developers_guide_ja.html]
+* English and Japanese user's guides: installed under share/doc in the built gem.
+* Japanese developer's guide: installed under share/doc in the built gem.
+* {NEWS}[NEWS] and {ChangeLog}[ChangeLog] describe this fork's changes.
 
 == TODO
 

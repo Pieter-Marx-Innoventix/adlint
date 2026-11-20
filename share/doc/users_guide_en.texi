@@ -2,7 +2,7 @@
 @setfilename users_guide_en.info
 @documentlanguage en
 @documentencoding utf-8
-@settitle AdLint 3.2.14 User's Guide
+@settitle AdLint 3.4.0 User's Guide
 
 @copying
 Copyright (C) 2010-2014, OGIS-RI Co.,Ltd.
@@ -36351,6 +36351,13 @@ independent writes. Variables are distinguished by their declaring scope; when
 control-flow branches join, a later read uses every assigned value that can
 reach it. A declaration initializer is treated as part of its declaration, not
 as a separate assignment.
+
+A value read on a later loop iteration, including the next evaluation of a
+loop condition, is considered used. A write that is overwritten before any
+read, or lies on a path that leaves the loop before reaching that read,
+remains unused. Automatic local variables are treated as newly defined on
+each entry to their declaring block. The analysis approximates control flow
+and does not enumerate every possible run-time iteration or value.
 
 @subsection Sample code
 

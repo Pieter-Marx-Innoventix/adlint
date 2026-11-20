@@ -2,6 +2,7 @@
 #
 # Author::    Yutaka Yanoh <mailto:yanoh@users.sourceforge.net>
 # Copyright:: Copyright (C) 2010-2014, OGIS-RI Co.,Ltd.
+# Modified::  2026-11-19; Innoventix fork identity, see ChangeLog.
 # License::   GPLv3+: GNU General Public License version 3 or later
 #
 # Owner::     Yutaka Yanoh <mailto:yanoh@users.sourceforge.net>
@@ -32,15 +33,19 @@
 module AdLint #:nodoc:
 
   MAJOR_VERSION = 3
-  MINOR_VERSION = 2
-  PATCH_VERSION = 15
-  RELEASE_DATE  = "2026-08-31"
+  MINOR_VERSION = 4
+  PATCH_VERSION = 0
+  RELEASE_DATE  = "2026-11-19"
+
+  FORK_NAME     = "Innoventix"
+  BASE_VERSION  = "3.2.14"
+  HOMEPAGE      = "https://github.com/Pieter-Marx-Innoventix/adlint"
 
   TRAITS_SCHEMA_VERSION = "3.0.0"
 
   SHORT_VERSION = "#{MAJOR_VERSION}.#{MINOR_VERSION}.#{PATCH_VERSION}"
 
-  VERSION = "#{SHORT_VERSION} (#{RELEASE_DATE})"
+  VERSION = "#{SHORT_VERSION} (#{RELEASE_DATE}) - #{FORK_NAME} fork"
 
   COPYRIGHT = <<EOS
      ___    ____  __    ___   _________
@@ -48,6 +53,10 @@ module AdLint #:nodoc:
    / /| | / / / / /   / /  |/ /  / /                    AdLint - Advanced Lint
   / __  |/ /_/ / /___/ / /|  /  / /
  /_/  |_|_____/_____/_/_/ |_/  /_/    Copyright (C) 2010-2014, OGIS-RI Co.,Ltd.
+
+ #{FORK_NAME} maintained fork, based on AdLint #{BASE_VERSION}.
+ Maintainer: Pieter Marx <pietermarx@innoventix.co.za>
+ #{HOMEPAGE}
 
  AdLint is free software: you can redistribute it and/or modify it under the
  terms of the GNU General Public License as published by the Free Software
@@ -64,7 +73,9 @@ module AdLint #:nodoc:
 EOS
 
   AUTHOR = <<EOS
-Written by Yutaka Yanoh and OGIS-RI Co.,Ltd.
+Based on AdLint #{BASE_VERSION}, originally written by Yutaka Yanoh and OGIS-RI Co.,Ltd.
+Maintained by #{FORK_NAME}: Pieter Marx <pietermarx@innoventix.co.za>
+#{HOMEPAGE}
 
 EOS
 

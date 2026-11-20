@@ -1,3 +1,40 @@
+Thu Nov 19 2026  Pieter Marx  <pietermarx@innoventix.co.za>
+
+	* lib/adlint/version.rb : Set the release reporting identity to 3.4.0
+	  (2026-11-19), Innoventix fork based on AdLint 3.2.14. Preserve the
+	  traits schema version and original author/copyright notices.
+	* Rakefile : Set fork homepage, maintainer metadata and installation
+	  message; retain the adlint gem name and commands.
+	* etc/mesg.d/core/en_US/messages.yml,
+	  etc/mesg.d/core/ja_JP/messages.yml,
+	  etc/mesg.d/c_builtin/en_US/messages.yml,
+	  etc/mesg.d/c_builtin/ja_JP/messages.yml : Set catalog revision to 3.4.0.
+	* README, README.md, AUTHORS : Identify the Innoventix maintained fork
+	  and retain original authorship.
+	* share/doc/users_guide_en.texi, share/doc/users_guide_ja.texi,
+	  share/doc/developers_guide_ja.texi : Set current guide titles to 3.4.0.
+	* BUILDING_ADLINT_GEM.md : Update version, working path and gem filename.
+	* MANIFEST : Include the fork README and gem-building instructions.
+	* NEWS : Set the 3.4.0 Innoventix fork heading and version date.
+
+Thu Nov 19 2026  Pieter Marx  <pietermarx@innoventix.co.za>
+
+	* lib/adlint/exam/c_builtin/cc1_metric.rb : Reconcile FN_UNUV reads
+	  and writes across loop iterations without re-executing the interpreter.
+	  Preserve branch alternatives, writes that overwrite earlier values,
+	  automatic-variable lifetimes, and paths ending in break, continue,
+	  return or goto. Account for read-modify-write expressions and simple
+	  for-increments skipped by the interpreter on continuing paths; retain
+	  uncertainty for unresolved accesses and side effects.
+	* metric-fixtures/fn_unuv_loops.c : Add 35 loop regression examples.
+	* features/metric_measurement/FN_UNUV.feature,
+	  features/step_definitions/metric_steps.rb : Verify fixture expectations
+	  through the normal feature suite, including missing/duplicate results.
+	* MANIFEST : Include the new fixture and automated regression files.
+	* share/doc/users_guide_en.texi, share/doc/users_guide_ja.texi : Describe
+	  reads on later loop iterations and the approximate control-flow model.
+	* NEWS : Describe the FN_UNUV correction and regression coverage.
+
 Wed Nov 18 2026  Pieter Marx  <pietermarx@innoventix.co.za>
 
 	* ChangeLog : Correct the record of the existing local metric changes.

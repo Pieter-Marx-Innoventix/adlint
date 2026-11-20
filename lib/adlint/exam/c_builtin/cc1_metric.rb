@@ -2,6 +2,7 @@
 #
 # Author::    Yutaka Yanoh <mailto:yanoh@users.sourceforge.net>
 # Copyright:: Copyright (C) 2010-2014, OGIS-RI Co.,Ltd.
+# Modified::  2026-11-19; see ChangeLog.
 # License::   GPLv3+: GNU General Public License version 3 or later
 #
 # Owner::     Yutaka Yanoh <mailto:yanoh@users.sourceforge.net>
@@ -345,7 +346,18 @@ module CBuiltin #:nodoc:
       interp.on_variable_referred       += T(:refer_variable)
       interp.on_variable_value_referred += T(:read_variable)
       interp.on_variable_value_updated  += T(:write_variable)
+      interp.on_branch_started         += M(:enter_usage_branch)
       interp.on_branch_ended            += M(:merge_finished_branch)
+      interp.on_goto_stmt_evaled        += T(:jump_usage_path)
+      interp.on_label_defined           += T(:join_usage_label)
+      [:while, :do, :for, :c99_for, :switch].each do |kind|
+        start_event = "on_#{kind}_stmt_started"
+        end_event = "on_#{kind}_stmt_ended"
+        interp.__send__("#{start_event}=",
+                        interp.__send__(start_event) + T(:enter_usage_control))
+        interp.__send__("#{end_event}=",
+                        interp.__send__(end_event) + T(:leave_usage_control))
+      end
       @cur_fun = nil
       @variables = nil
       @interpreter = interp
@@ -358,10 +370,12 @@ module CBuiltin #:nodoc:
     def enter_function(fun_def, *)
       @cur_fun = fun_def
       @variables = {}
+      @loop_usage = LoopValueUsage.new
     end
 
     def leave_function(*)
       if @cur_fun
+        @loop_usage.mark_loop_reads
         useless_cnt = @variables.each_value.reduce(0) { |cnt, variable|
           if variable[:writes].empty?
             variable[:referenced] ? cnt : cnt + 1
@@ -375,6 +389,7 @@ module CBuiltin #:nodoc:
                 @cur_fun.location, useless_cnt)
         @cur_fun = nil
         @variables = nil
+        @loop_usage = nil
       end
     end
 
@@ -382,6 +397,9 @@ module CBuiltin #:nodoc:
       @variables[variable_key(var)] = { :referenced => false, :writes => [],
                                         :live_writes => [] } if
         @cur_fun && var.named?
+      if @cur_fun && var.named? && !var.declared_as_static?
+        @loop_usage.access(:write, variable_key(var))
+      end
     end
 
     def refer_variable(*, var)
@@ -389,17 +407,20 @@ module CBuiltin #:nodoc:
       variable[:referenced] = true if variable
     end
 
-    def read_variable(*, var)
+    def read_variable(expr, var)
+      @loop_usage.observe_expression(expr) if @loop_usage
       variable = tracked_variable(var)
       return unless variable
 
       variable[:referenced] = true
+      @loop_usage.access(:read, variable_key(var))
       variable[:live_writes].each do |write|
         write.used = true if write_reaches_current_branch?(write)
       end
     end
 
-    def write_variable(*, var)
+    def write_variable(expr, var)
+      @loop_usage.observe_expression(expr) if @loop_usage
       variable = tracked_variable(var)
       return unless variable
 
@@ -408,11 +429,22 @@ module CBuiltin #:nodoc:
       end
 
       write = Write.new(@interpreter.current_branch, false)
+      # The interpreter suppresses some read notifications for ++, -- and
+      # compound assignment to avoid duplicate sequence-point warnings.
+      if expr.kind_of?(Cc1::CompoundAssignmentExpression) ||
+          expr.kind_of?(Cc1::PrefixIncrementExpression) ||
+          expr.kind_of?(Cc1::PostfixIncrementExpression) ||
+          expr.kind_of?(Cc1::PrefixDecrementExpression) ||
+          expr.kind_of?(Cc1::PostfixDecrementExpression)
+        @loop_usage.access(:read, variable_key(var))
+      end
+      @loop_usage.access(:write, variable_key(var), write)
       variable[:writes].push(write)
       variable[:live_writes].push(write)
     end
 
     def merge_finished_branch(branch)
+      @loop_usage.leave_branch(branch) if @loop_usage
       return unless @variables && branch.final?
 
       @variables.each_value do |variable|
@@ -431,6 +463,26 @@ module CBuiltin #:nodoc:
 
     def tracked_variable(var)
       @variables[variable_key(var)] if @variables && var.named?
+    end
+
+    def enter_usage_branch(branch)
+      @loop_usage.enter_branch(branch) if @loop_usage
+    end
+
+    def enter_usage_control(stmt)
+      @loop_usage.enter_control(stmt) if @loop_usage
+    end
+
+    def leave_usage_control(stmt)
+      @loop_usage.leave_control(stmt) if @loop_usage
+    end
+
+    def jump_usage_path(stmt, *)
+      @loop_usage.jump(stmt.target) if @loop_usage
+    end
+
+    def join_usage_label(stmt)
+      @loop_usage.label(stmt) if @loop_usage
     end
 
     def variable_key(var)
@@ -464,6 +516,264 @@ module CBuiltin #:nodoc:
 
       false
     end
+
+    # Replay only the metric's observed accesses, without executing the C
+    # interpreter again. Back-edges expose reads on later loop iterations;
+    # writes and automatic-variable definitions kill the preceding value.
+    # Existing non-loop counts are retained. Reconcile unread writes recorded
+    # inside loops, including condition-evaluation branches, and writes read
+    # after crossing a loop back-edge.
+    class LoopValueUsage
+      def initialize
+        @events = []
+        @edges = Hash.new { |hash, key| hash[key] = [] }
+        @frontier = [event(:entry)]
+        @groups = {}
+        @controls = []
+        @writes = []
+        @keys = Hash.new { |hash, name| hash[name] = Set.new }
+        @labels = {}
+        @jumps = Hash.new { |hash, key| hash[key] = [] }
+      end
+
+      def access(kind, key, write = nil)
+        @keys[key.identifier.value].add(key) if key
+        node = append(kind, key)
+        @writes.push([node, key, write,
+                      @controls.any? { |control| control[:loop] }]) if write
+      end
+
+      def observe_expression(expr)
+        @controls.each do |control|
+          if !control[:condition] && control[:condition_nodes].include?(expr)
+            control[:condition] = append(:entry)
+            control[:entry] ||= control[:condition]
+          end
+          if !control[:increment] && control[:increment_nodes].include?(expr)
+            control[:increment] = append(:entry)
+          end
+        end
+      end
+
+      def jump(target)
+        if @labels[target]
+          connect(@frontier, @labels[target], false)
+        else
+          @jumps[target].concat(@frontier)
+        end
+        @frontier = []
+      end
+
+      def label(stmt)
+        node = append(:entry)
+        @labels[stmt] = node
+        connect(@jumps.delete(stmt) || [], node, false)
+      end
+
+      def enter_branch(branch)
+        if branch.group.iteration?
+          control = @controls.reverse.find { |item| item[:loop] }
+          # for(;;), or a constant condition, may emit no condition accesses.
+          # Its back-edge starts at the body, after the one-time initializer.
+          control[:entry] ||= append(:entry) if control
+        end
+        group = @groups[branch.group] ||=
+          { :entry => @frontier.dup, :exits => [] }
+        @frontier = group[:entry].dup
+      end
+
+      def leave_branch(branch)
+        group = @groups[branch.group]
+        return unless group
+
+        if branch.break_with_return?
+          @frontier = []
+        elsif branch.break_with_continue?
+          control = @controls.reverse.find { |item| item[:loop] }
+          control[:continues].concat(@frontier) if control
+          @frontier = []
+        elsif branch.break_with_break?
+          @controls.last[:breaks].concat(@frontier) unless @controls.empty?
+          @frontier = []
+        end
+        group[:exits].concat(@frontier)
+        if branch.final?
+          @frontier = group[:exits]
+          @frontier += group[:entry] unless branch.group.complete?
+          @groups.delete(branch.group)
+        else
+          @frontier = group[:entry].dup
+        end
+      end
+
+      def enter_control(stmt)
+        is_for = stmt.kind_of?(Cc1::ForStatement) ||
+          stmt.kind_of?(Cc1::C99ForStatement)
+        is_loop = !stmt.kind_of?(Cc1::SwitchStatement)
+        condition = is_for ? stmt.condition_statement.expression : stmt.expression
+        @controls.push({ :statement => stmt, :loop => is_loop,
+          :entry => (is_loop && !is_for ? append(:entry) : nil),
+          :condition => nil, :condition_nodes => expression_nodes(condition),
+          :increment => nil,
+          :increment_nodes => expression_nodes(is_for ? stmt.expression : nil),
+          :has_increment => is_for && stmt.expression,
+          :breaks => [], :continues => [] })
+      end
+
+      def leave_control(stmt)
+        # A continue/return can bypass the switch-ended notifier. Unwind such
+        # inner controls when the enclosing loop's ensure block is notified.
+        index = @controls.rindex { |item| item[:statement].equal?(stmt) }
+        return unless index
+        control = @controls[index]
+        @controls.slice!(index..-1)
+        if control[:loop]
+          entry = control[:entry]
+          if entry && stmt.flow_may_be_true?
+            connect(@frontier, entry, true)
+          end
+          target = if stmt.kind_of?(Cc1::DoStatement)
+            control[:condition]
+          elsif control[:has_increment]
+            control[:increment]
+          else
+            entry
+          end
+          if target
+            connect(control[:continues], target, true)
+          elsif entry && control[:has_increment]
+            # The interpreter skips increment evaluation when every body
+            # path continues. Model simple accesses without executing it.
+            saved_frontier = @frontier
+            increment = event(:entry)
+            connect(control[:continues], increment, true)
+            @frontier = [increment]
+            append_increment(stmt.expression)
+            connect(@frontier, entry, false)
+            @frontier = saved_frontier
+          end
+        end
+        @frontier += control[:breaks]
+      end
+
+      def mark_loop_reads
+        @writes.each do |node, key, write, inside_loop|
+          next if write.used
+          pending = @edges[node].dup
+          visited = {}
+          until pending.empty?
+            current, crossed_loop = pending.pop
+            state = [current, crossed_loop]
+            next if visited[state]
+            visited[state] = true
+            kind, variable = @events[current]
+            next if kind == :unknown_write &&
+              (!variable || variable.include?(key.identifier.value))
+            if variable.equal?(key)
+              if kind == :read && (crossed_loop || inside_loop)
+                write.used = true
+                break
+              end
+              next if kind == :write
+            end
+            @edges[current].each do |successor, back_edge|
+              pending.push([successor, crossed_loop || back_edge])
+            end
+          end
+        end
+      end
+
+      private
+      def event(kind, key = nil)
+        @events.push([kind, key])
+        @events.size - 1
+      end
+
+      def append(kind, key = nil)
+        node = event(kind, key)
+        connect(@frontier, node, false)
+        @frontier = [node]
+        node
+      end
+
+      def connect(predecessors, target, back_edge)
+        predecessors.each { |node| @edges[node].push([target, back_edge]) }
+      end
+
+      def expression_nodes(expr)
+        visitor = ExpressionNodes.new
+        expr.accept(visitor) if expr
+        visitor.nodes
+      end
+
+      def increment_variable(expr, kind)
+        if expr.kind_of?(Cc1::ObjectSpecifier)
+          keys = @keys[expr.identifier.value]
+          if keys.size == 1
+            append(kind, keys.first)
+            return
+          end
+        end
+        # Ambiguous scope or an indirect store: do not prove the old value
+        # live through a write whose target cannot be identified safely.
+        append(:unknown_write) if kind == :write
+      end
+
+      def append_increment(expr)
+        case expr
+        when Cc1::ObjectSpecifier
+          increment_variable(expr, :read)
+        when Cc1::ConstantSpecifier, Cc1::NullConstantSpecifier,
+             Cc1::StringLiteralSpecifier
+          # No local-variable access.
+        when Cc1::GroupedExpression
+          append_increment(expr.expression)
+        when Cc1::CommaSeparatedExpression
+          expr.expressions.each { |part| append_increment(part) }
+        when Cc1::SimpleAssignmentExpression
+          append_increment(expr.rhs_operand)
+          increment_variable(expr.lhs_operand, :write)
+        when Cc1::CompoundAssignmentExpression
+          append_increment(expr.lhs_operand)
+          append_increment(expr.rhs_operand)
+          increment_variable(expr.lhs_operand, :write)
+        when Cc1::PrefixIncrementExpression, Cc1::PostfixIncrementExpression,
+             Cc1::PrefixDecrementExpression, Cc1::PostfixDecrementExpression
+          append_increment(expr.operand)
+          increment_variable(expr.operand, :write)
+        when Cc1::FunctionCallExpression
+          append_increment(expr.expression)
+          expr.argument_expressions.each { |arg| append_increment(arg) }
+          append(:unknown_write)
+        when Cc1::LogicalAndExpression, Cc1::LogicalOrExpression,
+             Cc1::ConditionalExpression
+          # Retain uncertainty about conditional evaluation and side effects.
+          append(:unknown_write)
+        else
+          if expr.respond_to?(:lhs_operand) && expr.respond_to?(:rhs_operand)
+            append_increment(expr.lhs_operand)
+            append_increment(expr.rhs_operand)
+          else
+            append(:unknown_write)
+          end
+        end
+      end
+
+      class ExpressionNodes < Cc1::SyntaxTreeMulticastVisitor
+        def initialize
+          @nodes = Set.new
+        end
+        attr_reader :nodes
+
+        private
+        def visit_with_notifying(_, node)
+          @nodes.add(node)
+          yield
+        end
+      end
+      private_constant :ExpressionNodes
+    end
+    private_constant :LoopValueUsage
   end
 
   class FN_CSUB < MetricMeasurement

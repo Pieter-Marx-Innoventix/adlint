@@ -1,4 +1,4 @@
-# Building the AdLint 3.2.15 Gem
+# Building the AdLint 3.4.0 Gem
 
 Run the following commands in PowerShell.
 
@@ -83,7 +83,7 @@ Run the following commands in PowerShell.
 10. Open the AdLint project and verify its Rake tasks:
 
     ```powershell
-    Set-Location "C:\Users\wille\Downloads\adlint\adlint-3.2.15"
+    Set-Location "C:\AdLint\adlint-fork"
     rake --tasks
     ```
 
@@ -122,7 +122,7 @@ Run the following commands in PowerShell.
     Expected output:
 
     ```text
-    pkg\adlint-3.2.15.0.gem
+    pkg\adlint-3.4.0.gem
     ```
 
 Racc, RSpec, Cucumber, Make, and the DevKit are development-only tools. The resulting AdLint gem declares no runtime dependencies, so end users do not need to install them.

@@ -21,10 +21,10 @@
 
 ++
 
-=== Unreleased changes based on \AdLint 3.2.14
+=== \AdLint 3.4.0 - Innoventix fork (2026-11-19)
 
-These changes belong to a maintained fork based on the 3.2.14 release.
-The fork's release number and release date have not yet been finalised.
+This is the Innoventix maintained fork, based on the 3.2.14 release.
+The original authors are Yutaka Yanoh and OGIS-RI Co.,Ltd.
 The historical release candidates 3.2.15, 3.2.17 and 3.2.19 are not included.
 
 ==== Metric calculation changes
@@ -42,6 +42,9 @@ The historical release candidates 3.2.15, 3.2.17 and 3.2.19 are not included.
   local variables and parameters, with improved handling of branch joins
   and branches terminated by return. Declaration initializers are not
   counted as separate writes.
+  Values read on a later loop iteration, including a later condition
+  check, are now recognised as used. Values overwritten before a read
+  or confined to paths that leave the loop remain unused.
 * FN_NEST measures control-structure depth rather than brace depth. Braced
   and unbraced control bodies are treated consistently, plain blocks do
   not increase depth, and an if/else-if/else chain counts as one level.
@@ -61,6 +64,7 @@ Review stored metric baselines and thresholds when adopting these changes.
   labels for the reachability pass. The abstract interpreter itself still
   processes source statements in lexical order after a goto.
 * Add 16 metric-verification fixtures and Windows gem-building instructions.
+* Add an automated FN_UNUV loop regression fixture covering 35 examples.
 * Revise the English and Japanese metric definitions and examples,
   including clarification of FN_UELS and FN_PATH.
 
