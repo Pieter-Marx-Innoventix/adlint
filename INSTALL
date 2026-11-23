@@ -23,18 +23,41 @@
 
 === Prerequisites
 
-* Ruby 1.9.3-p0 or later for normal use [*mandatory*]
-* GNU Make 3 or later to use adlintized Makefile [optional but recommended]
-* Racc 1.4.7 for development [optional]
+* Tested runtime: Windows, 32-bit Ruby 1.9.3p125, RubyGems 1.8.16.
+* The package permits Ruby >= 1.9.3. Newer Ruby versions, other platforms
+  and Bundler have not been verified for this fork.
+* GNU Make is optional for generated analysis Makefiles. The command-line
+  analyzer can be run directly without Make.
+* Source builds also require the tools in BUILDING_ADLINT_GEM.md. Packaged
+  users do not need the parser/documentation/test build tools.
 
 === Installation
 
-Setup your Ruby interpreter.
-Then, you can install \AdLint by following instruction.
+Obtain the verified Innoventix fork package and its SHA-256 from the
+maintainer or the chosen release. In PowerShell, inspect its fingerprint:
 
- % gem install adlint
+ PS> Get-FileHash -Algorithm SHA256 -LiteralPath '.\adlint-3.4.0.gem'
+
+Compare it with the expected fingerprint for that exact package, then install:
+
+ PS> gem install --local .\adlint-3.4.0.gem --no-ri --no-rdoc
+ PS> gem list adlint --local
+ PS> where.exe adlint
+ PS> adlint --version
+
+Expect version 3.4.0 and Innoventix fork identification. The generic registry
+command 'gem install adlint' does not select this fork: registry publication
+is a separate decision. Retain the exact gem and its fingerprint alongside
+any qualification evidence. Two builds can report 3.4.0 while containing
+different source revisions. Replacing a qualified installation requires
+checking the replacement against the qualification procedure.
 
 === Evaluation
+
+The following is a Unix-shell example inherited from upstream. On Windows,
+copy the demo using PowerShell and run the generated adlint_all.bat, or use
+GNU Make with the generated GNUmakefile. An unrelated program named make
+(for example, Borland Make) cannot replace GNU Make here.
 
 Tiny sample C language projects are bundled with \AdLint gem.
 You can evaluate \AdLint by following instructions.

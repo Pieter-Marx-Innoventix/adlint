@@ -5,6 +5,8 @@
 # License::   GPLv3+: GNU General Public License version 3 or later
 #
 # Owner::     Yutaka Yanoh <mailto:yanoh@users.sourceforge.net>
+# Modified::  Innoventix fork; local changes recorded 2026-08-31;
+#             notice added 2026-11-23. See ChangeLog and NOTICES.md.
 
 #--
 #     ___    ____  __    ___   _________

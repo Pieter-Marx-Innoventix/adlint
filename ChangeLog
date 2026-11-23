@@ -1,5 +1,23 @@
 Mon Nov 23 2026  Pieter Marx  <pietermarx@innoventix.co.za>
 
+	* README, README.md, INSTALL, BUILDING_ADLINT_GEM.md : State the tested
+	  runtime and unverified support ranges. Correct local fork installation
+	  and isolated clean-build instructions; include GNU Make, Texinfo and
+	  Graphviz prerequisites. Preserve qualified packages during rebuilding.
+	* METRIC_COMPATIBILITY.md : Record metric conventions, baseline/threshold
+	  implications and interpreter limitations, including the lexical value
+	  interpretation after goto and the scope of the public fixture evidence.
+	* NOTICES.md : Record original attribution, supplied-change provenance,
+	  maintenance and excluded historical/contributed changes. Distinguish
+	  package fingerprints from the unchanged 3.4.0 reporting identity.
+	* lib/adlint/cc1/branch.rb, lib/adlint/cc1/phase.rb,
+	  lib/adlint/cc1/syntax.rb, lib/adlint/cc1/reachability.rb : Add dated
+	  modification notices and clarify the new module's provenance. Comments
+	  only; retain existing copyright and licence notices.
+	* MANIFEST, NEWS : Include and describe the documentation additions.
+
+Mon Nov 23 2026  Pieter Marx  <pietermarx@innoventix.co.za>
+
 	* lib/adlint/cc1/domain.rb : Correct logical negation at strict zero
 	  endpoints. Values below zero or above zero cannot be zero, so their
 	  negation is false. Preserve certainty when composing nonzero unions

@@ -64,6 +64,9 @@ You should have received a copy of the GNU General Public License along with
 * English and Japanese user's guides: installed under share/doc in the built gem.
 * Japanese developer's guide: installed under share/doc in the built gem.
 * {NEWS}[NEWS] and {ChangeLog}[ChangeLog] describe this fork's changes.
+* METRIC_COMPATIBILITY.md records metric conventions and comparison limits.
+* NOTICES.md records attribution and source provenance.
+* BUILDING_ADLINT_GEM.md describes the tested Windows build procedure.
 
 == TODO
 

@@ -1,10 +1,12 @@
 # Statement-level control-flow reachability analysis.
 #
-# Author::    Yutaka Yanoh <mailto:yanoh@users.sourceforge.net>
+# Original project author:: Yutaka Yanoh <mailto:yanoh@users.sourceforge.net>
+# Origin::    Local metric changes recorded 2026-08-31, not the 3.2.14 baseline.
 # Copyright:: Copyright (C) 2010-2014, OGIS-RI Co.,Ltd.
 # License::   GPLv3+: GNU General Public License version 3 or later
 #
-# Owner::     Yutaka Yanoh <mailto:yanoh@users.sourceforge.net>
+# Maintainer:: Innoventix; Pieter Marx <mailto:pietermarx@innoventix.co.za>
+# Modified::  2026-11-23: clarify provenance; see NOTICES.md and ChangeLog.
 
 #--
 #     ___    ____  __    ___   _________

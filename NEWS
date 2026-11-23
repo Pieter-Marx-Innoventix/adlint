@@ -27,6 +27,16 @@ This is the Innoventix maintained fork, based on the 3.2.14 release.
 The original authors are Yutaka Yanoh and OGIS-RI Co.,Ltd.
 The historical release candidates 3.2.15, 3.2.17 and 3.2.19 are not included.
 
+==== Release documentation
+
+* Document the tested Windows Ruby 1.9.3p125 environment, without claiming
+  unverified newer-Ruby, other-platform or Bundler compatibility.
+* Correct local fork installation and clean build instructions, including
+  GNU Make, Texinfo and Graphviz prerequisites. Add metric compatibility
+  and source-provenance notes; retain original attribution and licence.
+* Distinguish package fingerprints and source revisions from the shared
+  3.4.0 reporting identity. Qualification artifacts remain separate.
+
 ==== Metric calculation changes
 
 * Preserve logical-negation certainty for values strictly below or above
