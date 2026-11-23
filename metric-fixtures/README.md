@@ -13,8 +13,9 @@ For only the metric features, run:
 ruby -Ilib -S cucumber --strict --require features features/metric_measurement
 ```
 
-The 19 C files contain 207 expectations across 15 metrics, including 35
-FN_UNUV loop cases and 20 do-loop transfer and inferred-condition cases. `fn_call_1.c` and `fn_call_2.c` are analysed together and
+The 21 C files contain 239 expectations across 15 metrics, including 35
+FN_UNUV loop cases, 20 do-loop transfer and inferred-condition cases, and
+32 while/for break and constant-condition reachability cases. `fn_call_1.c` and `fn_call_2.c` are analysed together and
 passed through cross-module analysis to check all nine caller counts. A
 separate scenario checks that sum(FN_STMT) = FL_STMT = 29 for the equivalent
 statement fixtures. The files are copied byte for byte, preserving FN_LINE's
@@ -30,5 +31,6 @@ tests also check that the expectation checker rejects invalid evidence.
 These checks are independent of the private wrapper. Passing them establishes
 agreement with these examples, not complete analyzer correctness. The inherited
 interpreter limitations remain separate audit work. The transfer and inferred-
-condition fixtures cover the two originally reproduced A04 findings; broader
-interpreter correctness is still subject to review.
+condition fixtures cover the reproduced A04, A10 and A11 findings. Broader
+interpreter correctness, including the separate known-nonzero negation issue,
+is still subject to review.

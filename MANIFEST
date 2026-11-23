@@ -470,9 +470,11 @@ metric-fixtures/fn_retn.c
 metric-fixtures/fn_stmt.c
 metric-fixtures/fn_uels.c
 metric-fixtures/fn_unrc.c
+metric-fixtures/fn_unrc_inferred_constants.c
 metric-fixtures/fn_unuv.c
 metric-fixtures/fn_unuv_do_transfers.c
 metric-fixtures/fn_unuv_inferred_conditions.c
+metric-fixtures/fn_unuv_loop_breaks.c
 metric-fixtures/fn_unuv_loops.c
 share/HEADER
 share/demo/Makefile

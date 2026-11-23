@@ -1,5 +1,24 @@
 Mon Nov 23 2026  Pieter Marx  <pietermarx@innoventix.co.za>
 
+	* lib/adlint/cc1/interp.rb : Catch only loop-local break events from
+	  while and both forms of for. Keep return/continue propagation and
+	  skip the for increment when a body breaks.
+	  Clear discarded literal/compound/conditional exit inferences so their
+	  actual evaluated truth determines branch reachability. Avoid treating
+	  unresolved body-local names as constants. Do-bodies have no inferred
+	  entry constraint; preserve their actual selection-condition truth.
+	* metric-fixtures/fn_unuv_loop_breaks.c,
+	  metric-fixtures/fn_unrc_inferred_constants.c,
+	  features/metric_measurement/interpreter_transfers.feature : Add 32
+	  regression cases for A10 and A11, including transfer guards, C99 for,
+	  known false/true conditions, conditional expressions, unknown exits
+	  and short-circuit side effects. Retain original fixture expectations.
+	* MANIFEST : Include both new verification fixtures.
+	* NEWS, metric-fixtures/README.md : Describe the corrections and coverage.
+	  Version identity and the installed qualification gem remain unchanged.
+
+Mon Nov 23 2026  Pieter Marx  <pietermarx@innoventix.co.za>
+
 	* lib/adlint/cc1/interp.rb : Catch do-body transfers at the do-loop
 	  boundary. Break skips the condition; continue reaches it; return
 	  leaves the function. End an unconditional continue path when its

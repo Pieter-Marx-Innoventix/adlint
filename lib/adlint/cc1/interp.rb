@@ -1143,7 +1143,9 @@ module Cc1 #:nodoc:
         begin
           enter_iteration_statement(orig_ctrlexpr)
           branch_opts = [ITERATION, NARROWING, FINAL, IMPLICIT_COND, COMPLETE]
-          branched_eval(ctrlexpr, *branch_opts) { interpret(node.statement) }
+          catch_loop_break do
+            branched_eval(ctrlexpr, *branch_opts) { interpret(node.statement) }
+          end
         ensure
           leave_iteration_statement(orig_ctrlexpr)
         end
@@ -1151,7 +1153,9 @@ module Cc1 #:nodoc:
         begin
           enter_iteration_statement(orig_ctrlexpr)
           branch_opts = [ITERATION, NARROWING, FINAL, IMPLICIT_COND]
-          branched_eval(ctrlexpr, *branch_opts) { interpret(node.statement) }
+          catch_loop_break do
+            branched_eval(ctrlexpr, *branch_opts) { interpret(node.statement) }
+          end
         ensure
           leave_iteration_statement(orig_ctrlexpr)
         end
@@ -1168,7 +1172,9 @@ module Cc1 #:nodoc:
 
       widen_varying_variable_value_domain(node)
 
-      orig_ctrlexpr, * = node.deduct_controlling_expression
+      # The do-body has no inferred entry constraint. Its actual selection
+      # conditions must retain their evaluated truth, including constants.
+      orig_ctrlexpr = nil
 
       # The body branch is complete because a do-loop is entered at least
       # once. Catch its propagated jump at this loop boundary: break skips
@@ -1219,9 +1225,9 @@ module Cc1 #:nodoc:
 
       case
       when ctrlexpr_val.test_must_be_true.true?
-        interpret_for_body_statement(node, true)
+        catch_loop_break { interpret_for_body_statement(node, true) }
       when ctrlexpr_val.test_may_be_true.true?
-        interpret_for_body_statement(node, false)
+        catch_loop_break { interpret_for_body_statement(node, false) }
       end
     ensure
       notify_for_stmt_ended(node)
@@ -1245,9 +1251,9 @@ module Cc1 #:nodoc:
 
         case
         when ctrlexpr_val.test_must_be_true.true?
-          interpret_for_body_statement(node, true)
+          catch_loop_break { interpret_for_body_statement(node, true) }
         when ctrlexpr_val.test_may_be_true.true?
-          interpret_for_body_statement(node, false)
+          catch_loop_break { interpret_for_body_statement(node, false) }
         end
       end
     ensure
@@ -1310,16 +1316,33 @@ module Cc1 #:nodoc:
     end
 
     private
+    def catch_loop_break
+      event = BreakEvent.catch { yield }
+      # Only break exits this loop. Return and continue retain their existing
+      # propagation, including termination of a definitely endless continue.
+      event.throw if event && !event.break?
+    end
+
     def iteration_branch_condition(node, explicit_ctrlexpr)
       original, normalized = node.deduct_controlling_expression
-      if original && !original.equal?(explicit_ctrlexpr) &&
-          (!collect_logical_and_expressions(original).empty? ||
-           !collect_logical_or_expressions(original).empty?)
-        # A compound exit condition can be false in several ways. Assuming
-        # one such way at entry can hide a real short-circuit operand read.
-        # Retain scalar/pointer inference; use the source entry condition
-        # instead for compound inferred exits.
-        normalized = explicit_ctrlexpr && explicit_ctrlexpr.to_normalized_logical
+      if original && !original.equal?(explicit_ctrlexpr)
+        conditional = ConditionalExpressionExtractor.new
+        original.accept(conditional)
+        # Body-local names may not be declared yet at loop entry. Do not
+        # mistake an unresolved variable (especially a pointer) for a constant.
+        literal_constant = collect_object_specifiers(original).empty? &&
+          constant_expression?(original)
+        if literal_constant || !conditional.expressions.empty? ||
+            !collect_logical_and_expressions(original).empty? ||
+            !collect_logical_or_expressions(original).empty?
+          # A constant exit is not an unknown condition, and compound exits
+          # can be false in several ways. Use the source entry guard instead.
+          # Clear the discarded inference so if/else evaluation keeps its
+          # real truth and short-circuit behaviour. Scalar/pointer inference
+          # remains available for nonconstant, single-condition exits.
+          normalized = explicit_ctrlexpr && explicit_ctrlexpr.to_normalized_logical
+          original = nil
+        end
       end
       [original, normalized]
     end
