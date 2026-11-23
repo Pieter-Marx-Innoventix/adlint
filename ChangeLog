@@ -1,5 +1,21 @@
 Mon Nov 23 2026  Pieter Marx  <pietermarx@innoventix.co.za>
 
+	* lib/adlint/cc1/domain.rb : Correct logical negation at strict zero
+	  endpoints. Values below zero or above zero cannot be zero, so their
+	  negation is false. Preserve certainty when composing nonzero unions
+	  and intersections; keep zero-containing ranges conservative.
+	* spec/adlint/cc1/logical_negation_spec.rb : Add 40 domain/value checks
+	  for boundary, union, intersection, empty/unknown and repeated-negation
+	  behaviour under both logical-right-shift settings.
+	* metric-fixtures/fn_unrc_logical_negation.c,
+	  features/metric_measurement/interpreter_transfers.feature : Add 12
+	  negation reachability cases, including the original A12 reproducer.
+	* MANIFEST : Include the new verification fixture and unit specification.
+	* NEWS, metric-fixtures/README.md : Describe the correction and coverage.
+	  Version identity and the installed qualification gem remain unchanged.
+
+Mon Nov 23 2026  Pieter Marx  <pietermarx@innoventix.co.za>
+
 	* lib/adlint/cc1/interp.rb : Catch only loop-local break events from
 	  while and both forms of for. Keep return/continue propagation and
 	  skip the for increment when a body breaks.

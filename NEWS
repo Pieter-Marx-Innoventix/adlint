@@ -29,6 +29,10 @@ The historical release candidates 3.2.15, 3.2.17 and 3.2.19 are not included.
 
 ==== Metric calculation changes
 
+* Preserve logical-negation certainty for values strictly below or above
+  zero, including unions representing a known true value. Correct missing
+  unreachable-statement counts caused by treating their negation as unknown.
+
 * FL_STMT and FN_STMT count each for-statement once, without counting its
   initializer and condition helper statements separately.
 * FN_UNRC uses a dedicated statement-reachability pass that follows goto
@@ -78,12 +82,13 @@ Review stored metric baselines and thresholds when adopting these changes.
   processes source statements in lexical order after a goto.
 * Add 16 metric-verification fixtures and Windows gem-building instructions.
 * Add an automated FN_UNUV loop regression fixture covering 35 examples.
-* Run all 239 expectations in the 21 public metric fixtures through the
+* Run all 251 expectations in the 22 public metric fixtures through the
   normal feature suite, including cross-module caller counts and the
   function/file statement-count cross-check. Reject missing, duplicate,
   malformed or mismatched results and isolate each run from stale output.
   Include 20 regression cases for do-loop transfers and inferred conditions.
   Add 32 cases for while/for breaks and inferred constant-condition exits.
+  Add 12 negation reachability cases and 40 direct domain/value unit checks.
 * Revise the English and Japanese metric definitions and examples,
   including clarification of FN_UELS and FN_PATH.
 

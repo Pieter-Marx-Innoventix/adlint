@@ -5,6 +5,7 @@
 # License::   GPLv3+: GNU General Public License version 3 or later
 #
 # Owner::     Yutaka Yanoh <mailto:yanoh@users.sourceforge.net>
+# Modified::  2026-11-23; see ChangeLog.
 
 #--
 #     ___    ____  __    ___   _________
@@ -4401,7 +4402,8 @@ module Cc1 #:nodoc:
     end
 
     def !
-      if @value < 0
+      # The strict upper bound excludes zero when its endpoint is zero too.
+      if @value <= 0
         ValueDomain.of_false(logical_shr?)
       else
         ValueDomain.of_unlimited(logical_shr?)
@@ -5345,7 +5347,8 @@ module Cc1 #:nodoc:
     end
 
     def !
-      if @value > 0
+      # The strict lower bound excludes zero when its endpoint is zero too.
+      if @value >= 0
         ValueDomain.of_false(logical_shr?)
       else
         ValueDomain.of_unlimited(logical_shr?)

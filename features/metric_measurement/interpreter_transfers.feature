@@ -29,3 +29,10 @@ Feature: Preserve variable uses across interpreter control transfers
       | FN_UNUV | fn_unuv_inferred_conditions.c |
     When I analyse the metric fixtures
     Then the metric results should match the fixture expectations
+
+  Scenario: Preserve known truth through scalar logical negation
+    Given the metric verification fixtures:
+      | metric  | file                       |
+      | FN_UNRC | fn_unrc_logical_negation.c |
+    When I analyse the metric fixtures
+    Then the metric results should match the fixture expectations
