@@ -1,3 +1,31 @@
+Mon Nov 23 2026  Pieter Marx  <pietermarx@innoventix.co.za>
+
+	* lib/adlint/cc1/interp.rb : Catch do-body transfers at the do-loop
+	  boundary. Break skips the condition; continue reaches it; return
+	  leaves the function. End an unconditional continue path when its
+	  do condition is definitely true, preserving unreachable tail code.
+	  Evaluate if and if/else controlling expressions even when selected
+	  for loop inference, keeping their reads, side effects and sequence
+	  points. Retain scalar/pointer inference and use the explicit entry
+	  condition for compound inferred exits, preserving logical-operand reads.
+	* lib/adlint/cc1/option.rb, lib/adlint/cc1/interp.rb,
+	  lib/adlint/exam/c_builtin/cc1_check.rb : Mark inferred-condition
+	  evaluation and prevent W0610 from reporting a contradiction introduced
+	  by the loop's own inference. Preserve other expression notifications
+	  and diagnostics. Existing W0610 scenarios verify the inference context
+	  does not hide independent always-false comparisons.
+	* features/code_check/W0422.feature : Expect the warning and context at
+	  the second pointer dereference in the newly evaluated exit condition.
+	* metric-fixtures/fn_unuv_do_transfers.c,
+	  metric-fixtures/fn_unuv_inferred_conditions.c,
+	  features/metric_measurement/interpreter_transfers.feature : Add 20
+	  regression cases for the two reproduced interpreter findings, with
+	  guards for returns, genuinely unused values, skipped conditions,
+	  short-circuit evaluation, sizeof operands and endless continues.
+	* MANIFEST : Include the new regression fixtures and feature.
+	* NEWS, metric-fixtures/README.md : Describe the fixes and coverage.
+	  Version identity and installed wrapper qualification gem unchanged.
+
 Fri Nov 20 2026  Pieter Marx  <pietermarx@innoventix.co.za>
 
 	* features/metric_measurement/fixtures.feature,

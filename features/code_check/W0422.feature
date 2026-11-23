@@ -66,6 +66,8 @@ Feature: W0422
       | W0114 | 7    | 9      |
       | W0628 | 3    | 6      |
 
+  # The inferred exit condition still evaluates *p2 at line 14. It must
+  # report that possible null dereference as well as the earlier one.
   Scenario: pointer variable as a part of controlling expression is declared in
             the iteration body
     Given a target source named "fixture.c" with:
@@ -103,6 +105,12 @@ Feature: W0422
       | C1005 | 9    | 18     |
       | C1005 | 10   | 16     |
       | W0024 | 12   | 19     |
+      | W0422 | 14   | 17     |
+      | C1000 |      |        |
+      | C1001 | 5    | 9      |
+      | C1005 | 9    | 18     |
+      | C1005 | 10   | 16     |
+      | C1002 | 11   | 24     |
       | W0114 | 5    | 5      |
       | W0114 | 8    | 9      |
       | W0628 | 3    | 6      |

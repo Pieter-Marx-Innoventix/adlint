@@ -5,6 +5,7 @@
 # License::   GPLv3+: GNU General Public License version 3 or later
 #
 # Owner::     Yutaka Yanoh <mailto:yanoh@users.sourceforge.net>
+# Modified::  2026-11-23; see ChangeLog.
 
 #--
 #     ___    ____  __    ___   _________
@@ -14304,6 +14305,7 @@ module CBuiltin #:nodoc:
     def initialize(phase_ctxt)
       super
       interp = phase_ctxt[:cc1_interpreter]
+      @interp = interp
       interp.on_relational_expr_evaled  += T(:check)
       interp.on_equality_expr_evaled    += T(:check)
       interp.on_logical_and_expr_evaled += T(:check)
@@ -14319,7 +14321,10 @@ module CBuiltin #:nodoc:
 
     private
     def check(expr, *, rslt_var)
-      if rslt_var.value.test_must_be_false.true? && !should_not_check?(expr)
+      # An inferred exit is evaluated under the loop's own assumptions.
+      # Those assumptions cannot justify an always-false source diagnostic.
+      if rslt_var.value.test_must_be_false.true? &&
+          !@interp.inferred_condition? && !should_not_check?(expr)
         W(expr.location)
       end
     end

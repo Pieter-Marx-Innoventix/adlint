@@ -369,6 +369,7 @@ features/code_extraction/TODO
 features/metric_measurement/FN_UNUV.feature
 features/metric_measurement/TODO
 features/metric_measurement/fixtures.feature
+features/metric_measurement/interpreter_transfers.feature
 features/step_definitions/code_check_steps.rb
 features/step_definitions/metric_steps.rb
 features/support/env.rb
@@ -470,6 +471,8 @@ metric-fixtures/fn_stmt.c
 metric-fixtures/fn_uels.c
 metric-fixtures/fn_unrc.c
 metric-fixtures/fn_unuv.c
+metric-fixtures/fn_unuv_do_transfers.c
+metric-fixtures/fn_unuv_inferred_conditions.c
 metric-fixtures/fn_unuv_loops.c
 share/HEADER
 share/demo/Makefile

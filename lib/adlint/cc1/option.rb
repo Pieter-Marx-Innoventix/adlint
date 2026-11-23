@@ -5,6 +5,7 @@
 # License::   GPLv3+: GNU General Public License version 3 or later
 #
 # Owner::     Yutaka Yanoh <mailto:yanoh@users.sourceforge.net>
+# Modified::  2026-11-23; see ChangeLog.
 
 #--
 #     ___    ____  __    ___   _________
@@ -35,6 +36,7 @@ module Cc1 #:nodoc:
   module InterpreterOptions
     QUIET = :quiet
     WITHOUT_SIDE_EFFECTS = :without_side_effects
+    INFERRED_CONDITION = :inferred_condition
   end
 
   module BranchOptions

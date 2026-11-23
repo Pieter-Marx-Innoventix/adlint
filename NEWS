@@ -60,15 +60,24 @@ Review stored metric baselines and thresholds when adopting these changes.
 * Support valid unbraced switch bodies, including directly labelled case
   and default clauses; skip W0007 checking for non-compound switch bodies.
 * End an interpreter branch on a continue-statement within an iteration.
+* Keep a do-loop's break and continue within that loop: break skips its
+  condition, continue evaluates it, and return still leaves the function.
+  Preserve non-fallthrough for an unconditional continue in an endless loop.
+* Evaluate inferred loop-breaking conditions, preserving actual reads,
+  assignments and calls. Retain scalar/pointer inferences and use the source
+  entry condition for compound inferred exits to preserve operand reads.
+  Newly evaluated expressions can expose previously missed diagnostics.
+  Avoid always-false warnings caused solely by the loop inference itself.
 * Record control-flow observations and link goto statements to their
   labels for the reachability pass. The abstract interpreter itself still
   processes source statements in lexical order after a goto.
 * Add 16 metric-verification fixtures and Windows gem-building instructions.
 * Add an automated FN_UNUV loop regression fixture covering 35 examples.
-* Run all 187 expectations in the 17 public metric fixtures through the
+* Run all 207 expectations in the 19 public metric fixtures through the
   normal feature suite, including cross-module caller counts and the
   function/file statement-count cross-check. Reject missing, duplicate,
   malformed or mismatched results and isolate each run from stale output.
+  Include 20 regression cases for do-loop transfers and inferred conditions.
 * Revise the English and Japanese metric definitions and examples,
   including clarification of FN_UELS and FN_PATH.
 

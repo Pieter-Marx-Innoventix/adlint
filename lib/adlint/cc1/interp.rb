@@ -5,6 +5,7 @@
 # License::   GPLv3+: GNU General Public License version 3 or later
 #
 # Owner::     Yutaka Yanoh <mailto:yanoh@users.sourceforge.net>
+# Modified::  2026-11-23; see ChangeLog.
 
 #--
 #     ___    ____  __    ___   _________
@@ -470,6 +471,10 @@ module Cc1 #:nodoc:
 
     def quiet?
       cur_opts.include?(QUIET)
+    end
+
+    def inferred_condition?
+      cur_opts.include?(INFERRED_CONDITION)
     end
 
     def _quiet=(quiet)
@@ -1039,15 +1044,18 @@ module Cc1 #:nodoc:
       node.executed = true
 
       orig_ctrlexpr = node.expression
+      # Loop inference changes branch feasibility, not evaluation of the
+      # source expression: keep its reads, side effects and sequence point.
+      eval_opts = orig_ctrlexpr == effective_ctrlexpr ? [INFERRED_CONDITION] : []
+      ctrlexpr_obj = interpret(orig_ctrlexpr, *eval_opts)
+      ctrlexpr_var = object_to_variable(ctrlexpr_obj, orig_ctrlexpr)
+      ctrlexpr_val = value_of(ctrlexpr_var)
+      notify_variable_value_referred(orig_ctrlexpr, ctrlexpr_var)
+      notify_sequence_point_reached(SequencePoint.new(orig_ctrlexpr))
       if orig_ctrlexpr == effective_ctrlexpr
         ctrlexpr_val = scalar_value_of_arbitrary
         ctrlexpr = nil
       else
-        ctrlexpr_obj = interpret(orig_ctrlexpr)
-        ctrlexpr_var = object_to_variable(ctrlexpr_obj, orig_ctrlexpr)
-        ctrlexpr_val = value_of(ctrlexpr_var)
-        notify_variable_value_referred(orig_ctrlexpr, ctrlexpr_var)
-        notify_sequence_point_reached(SequencePoint.new(orig_ctrlexpr))
         ctrlexpr = orig_ctrlexpr.to_normalized_logical
       end
       notify_if_ctrlexpr_evaled(node, ctrlexpr_val)
@@ -1074,15 +1082,18 @@ module Cc1 #:nodoc:
       node.executed = true
 
       orig_ctrlexpr = node.expression
+      # Loop inference changes branch feasibility, not evaluation of the
+      # source expression: keep its reads, side effects and sequence point.
+      eval_opts = orig_ctrlexpr == effective_ctrlexpr ? [INFERRED_CONDITION] : []
+      ctrlexpr_obj = interpret(orig_ctrlexpr, *eval_opts)
+      ctrlexpr_var = object_to_variable(ctrlexpr_obj, orig_ctrlexpr)
+      ctrlexpr_val = value_of(ctrlexpr_var)
+      notify_variable_value_referred(orig_ctrlexpr, ctrlexpr_var)
+      notify_sequence_point_reached(SequencePoint.new(orig_ctrlexpr))
       if orig_ctrlexpr == effective_ctrlexpr
         ctrlexpr_val = scalar_value_of_arbitrary
         ctrlexpr = nil
       else
-        ctrlexpr_obj = interpret(orig_ctrlexpr)
-        ctrlexpr_var = object_to_variable(ctrlexpr_obj, orig_ctrlexpr)
-        ctrlexpr_val = value_of(ctrlexpr_var)
-        notify_variable_value_referred(orig_ctrlexpr, ctrlexpr_var)
-        notify_sequence_point_reached(SequencePoint.new(orig_ctrlexpr))
         ctrlexpr = orig_ctrlexpr.to_normalized_logical
       end
       notify_if_else_ctrlexpr_evaled(node, ctrlexpr_val)
@@ -1125,7 +1136,7 @@ module Cc1 #:nodoc:
       notify_while_ctrlexpr_evaled(node, ctrlexpr_val)
       node.record_flow_condition(ctrlexpr_val)
 
-      orig_ctrlexpr, ctrlexpr = node.deduct_controlling_expression
+      orig_ctrlexpr, ctrlexpr = iteration_branch_condition(node, node.expression)
 
       case
       when ctrlexpr_val.test_must_be_true.true?
@@ -1159,13 +1170,20 @@ module Cc1 #:nodoc:
 
       orig_ctrlexpr, * = node.deduct_controlling_expression
 
-      begin
-        enter_iteration_statement(orig_ctrlexpr)
-        branch_opts = [ITERATION, NARROWING, FINAL, IMPLICIT_COND, COMPLETE]
-        branched_eval(nil, *branch_opts) { interpret(node.statement) }
-      ensure
-        leave_iteration_statement(orig_ctrlexpr)
+      # The body branch is complete because a do-loop is entered at least
+      # once. Catch its propagated jump at this loop boundary: break skips
+      # the condition, continue reaches it, and return leaves the function.
+      body_event = BreakEvent.catch do
+        begin
+          enter_iteration_statement(orig_ctrlexpr)
+          branch_opts = [ITERATION, NARROWING, FINAL, IMPLICIT_COND, COMPLETE]
+          branched_eval(nil, *branch_opts) { interpret(node.statement) }
+        ensure
+          leave_iteration_statement(orig_ctrlexpr)
+        end
       end
+      body_event.throw if body_event && body_event.return?
+      return if body_event && body_event.break?
 
       ctrlexpr_obj = interpret(node.expression)
       ctrlexpr_var = object_to_variable(ctrlexpr_obj, node.expression)
@@ -1174,6 +1192,12 @@ module Cc1 #:nodoc:
       notify_sequence_point_reached(SequencePoint.new(node.expression))
       notify_do_ctrlexpr_evaled(node, ctrlexpr_val)
       node.record_flow_condition(ctrlexpr_val)
+      if body_event && body_event.continue? &&
+          ctrlexpr_val.test_must_be_true.true?
+        # This path has no loop exit. End abstract interpretation of it;
+        # the event does not represent an explicit C return statement.
+        BreakEvent.of_return.throw
+      end
     ensure
       notify_do_stmt_ended(node)
     end
@@ -1286,6 +1310,20 @@ module Cc1 #:nodoc:
     end
 
     private
+    def iteration_branch_condition(node, explicit_ctrlexpr)
+      original, normalized = node.deduct_controlling_expression
+      if original && !original.equal?(explicit_ctrlexpr) &&
+          (!collect_logical_and_expressions(original).empty? ||
+           !collect_logical_or_expressions(original).empty?)
+        # A compound exit condition can be false in several ways. Assuming
+        # one such way at entry can hide a real short-circuit operand read.
+        # Retain scalar/pointer inference; use the source entry condition
+        # instead for compound inferred exits.
+        normalized = explicit_ctrlexpr && explicit_ctrlexpr.to_normalized_logical
+      end
+      [original, normalized]
+    end
+
     def interpret_for_ctrlexpr(node)
       node.condition_statement.executed = true
 
@@ -1312,7 +1350,8 @@ module Cc1 #:nodoc:
         branch_opts = [ITERATION, NARROWING, FINAL, IMPLICIT_COND]
       end
 
-      orig_ctrlexpr, ctrlexpr = node.deduct_controlling_expression
+      orig_ctrlexpr, ctrlexpr =
+        iteration_branch_condition(node, node.condition_statement.expression)
       enter_iteration_statement(orig_ctrlexpr)
 
       branched_eval(ctrlexpr, *branch_opts) do
